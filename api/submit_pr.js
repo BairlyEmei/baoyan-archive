@@ -73,7 +73,7 @@ export default async function handler(req, res) {
   // ----------------------------------------------------------
   // 2. 请求体解析与字段空值校验
   // ----------------------------------------------------------
-  const { markdownContent, universityName, turnstileToken } = req.body;
+  const { markdownContent, universityName, turnstileToken, authorName, authorEmail } = req.body;
 
   if (!markdownContent || !universityName || !turnstileToken) {
     return res.status(400).json({
@@ -163,7 +163,6 @@ export default async function handler(req, res) {
                                                    branch: branchName,
     });
 
-    // 4-6. 自动创建 PR，等待维护者 Review 后 Merge
     const { data: prData } = await octokit.pulls.create({
       owner,
       repo,
@@ -173,9 +172,11 @@ export default async function handler(req, res) {
       body: [
         '## 📋 自动生成的档案提交',
         '',
-        `**投稿��校：** ${universityName}`,
+        `**投稿院校：** ${universityName}`,
         `**文件路径：** \`${filePath}\``,
         `**提交分支：** \`${branchName}\``,
+        `**投稿署名：** ${authorName || '匿名'}`,
+        ...(authorEmail ? [`**联系邮箱：** ${authorEmail}`] : []),
         '',
         '> 由用户通过网页端表单自动生成，已通过 Turnstile 人机验证。',
         '> **请 Maintainer 检查数据合规性后再 Merge。**',
