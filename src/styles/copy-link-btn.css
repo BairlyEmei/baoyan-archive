@@ -1,0 +1,40 @@
+/* 外链"复制"按钮样式 — 与 Starlight 亮色/暗色主题自动适配 */
+
+.copy-link-btn {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.7em;
+  line-height: 1.4;
+  padding: 0.1em 0.45em;
+  margin-left: 0.3em;
+  vertical-align: middle;
+  border-radius: 4px;
+  border: 1px solid var(--sl-color-hairline-light, var(--sl-color-hairline));
+  background-color: var(--sl-color-bg-sidebar, var(--sl-color-bg-nav));
+  color: var(--sl-color-accent);
+  font-family: inherit;
+  user-select: none;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.copy-link-btn:hover {
+  background-color: var(--sl-color-accent-low);
+  color: var(--sl-color-accent-high, var(--sl-color-accent));
+  border-color: var(--sl-color-accent);
+}
+
+.copy-link-btn:active {
+  transform: scale(0.94);
+}
+
+.copy-link-btn--copied {
+  background-color: var(--sl-color-accent-low);
+  color: var(--sl-color-accent-high, var(--sl-color-accent));
+  border-color: var(--sl-color-accent);
+}
