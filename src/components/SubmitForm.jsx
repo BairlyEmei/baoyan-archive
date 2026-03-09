@@ -10,8 +10,8 @@ import {
     Typography,
     ConfigProvider,
     theme as antdTheme,
-    message,
 } from 'antd';
+import { Turnstile } from '@marsidev/react-turnstile';
 import MarkdownIt from 'markdown-it';
 import './editor-fixes.css';
 import { parseAndValidateJson } from './JsonParser';
@@ -114,6 +114,9 @@ export default function SubmitForm() {
     const [parseSuccess, setParseSuccess] = useState('');
     const [formValues, setFormValues] = useState(defaultValues);
     const [pendingDelete, setPendingDelete] = useState(null);
+    const [turnstileToken, setTurnstileToken] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitResult, setSubmitResult] = useState(null); // { type: 'success'|'error'|'fallback', message, prUrl? }
 
     useEffect(() => {
         const root = document.documentElement;
@@ -165,9 +168,48 @@ export default function SubmitForm() {
         URL.revokeObjectURL(url);
     }
 
-    function onSubmit() {
-        // API 请求暂留空，当前阶段仅保留交互入口。
-        message.info('已生成投稿内容。API 提交功能暂未接入。你可以先下载 Markdown 并手动提交。');
+    async function onSubmit() {
+        const universityName = formValues.basicInfo.school;
+        const markdownContent = serializeToMarkdown(formValues);
+
+        setIsSubmitting(true);
+        setSubmitResult(null);
+
+        try {
+            const response = await fetch('/api/submit_pr', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ markdownContent, universityName, turnstileToken }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // HTTP 200：提交成功，展示 PR 链接
+                setSubmitResult({ type: 'success', message: data.message, prUrl: data.prUrl });
+            } else if (response.status === 504 || response.status === 502 || data.fallback) {
+                // 容灾：自动触发本地下载，同时提示用户手动提交
+                handleDownload();
+                setSubmitResult({
+                    type: 'fallback',
+                    message: '网络异常，已为你自动下载 Markdown，请手动提交到 GitHub',
+                });
+            } else {
+                // 其他错误：展示服务端返回的错误信息
+                setSubmitResult({ type: 'error', message: data.error || '提交失败，请稍后重试' });
+            }
+        } catch (err) {
+            // 网络层异常（如无法连接）：同样触发容灾下载
+            handleDownload();
+            setSubmitResult({
+                type: 'fallback',
+                message: '网络异常，已为你自动下载 Markdown，请手动提交到 GitHub',
+            });
+        } finally {
+            setIsSubmitting(false);
+            // 重置 Turnstile token，让 widget 自动刷新以便用户再次提交
+            setTurnstileToken('');
+        }
     }
 
     function isPendingDelete(type, key) {
@@ -385,12 +427,54 @@ export default function SubmitForm() {
                         </Form.Item>
                     </Card>
 
+                    <div style={{ marginBottom: 12 }}>
+                        <Turnstile
+                            siteKey="1x00000000000000000000AA"
+                            onSuccess={(token) => setTurnstileToken(token)}
+                        />
+                    </div>
                     <Space wrap className="section-action-row">
-                        <Button htmlType="submit" type="primary">
-                            提交（API 占位）
+                        <Button
+                            htmlType="submit"
+                            type="primary"
+                            loading={isSubmitting}
+                            disabled={!turnstileToken}
+                        >
+                            提交投稿
                         </Button>
                         <Button onClick={handleDownload}>下载 Markdown</Button>
                     </Space>
+                    {submitResult?.type === 'success' && (
+                        <Alert
+                            type="success"
+                            showIcon
+                            style={{ marginTop: 12 }}
+                            message={submitResult.message}
+                            description={
+                                submitResult.prUrl ? (
+                                    <a href={submitResult.prUrl} target="_blank" rel="noreferrer">
+                                        查看你的 PR →
+                                    </a>
+                                ) : null
+                            }
+                        />
+                    )}
+                    {submitResult?.type === 'fallback' && (
+                        <Alert
+                            type="warning"
+                            showIcon
+                            style={{ marginTop: 12 }}
+                            message={submitResult.message}
+                        />
+                    )}
+                    {submitResult?.type === 'error' && (
+                        <Alert
+                            type="error"
+                            showIcon
+                            style={{ marginTop: 12 }}
+                            message={submitResult.message}
+                        />
+                    )}
                 </Form>
 
                 <Card title="Markdown 实时渲染预览（markdown-it）" size="small" style={{ marginTop: 16 }}>

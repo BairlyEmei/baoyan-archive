@@ -7,10 +7,18 @@ import { nanoid } from "nanoid";
 // ============================================================
 const ALLOWED_ORIGINS = [
   'http://localhost:4321',             // Astro 本地开发默认端口
-'http://localhost:3000',             // 备用本地端口
-// 'https://baoyan-archive.vercel.app', // Vercel 预览域名（上线前填入实际值）
-// 'https://www.your-custom-domain.com' // 正式生产主域名
+  'http://localhost:3000',             // 备用本地端口
+  'https://baoyan-archive.vercel.app', // Vercel 生产域名
+  'https://www.your-custom-domain.com' // 正式生产主域名
 ];
+
+// 允许所有 Vercel 预览部署子域名（*.vercel.app）
+function isOriginAllowed(origin) {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  if (/\.vercel\.app$/.test(origin)) return true;
+  return false;
+}
 
 // ============================================================
 // 超时保护工厂：Serverless 函数最多跑 8s，超时抛 TIMEOUT 错误
@@ -38,7 +46,7 @@ export default async function handler(req, res) {
   // ----------------------------------------------------------
   const origin = req.headers.origin;
 
-  if (ALLOWED_ORIGINS.includes(origin)) {
+  if (isOriginAllowed(origin)) {
     // 在白名单内，动态注入允许来源（而非写死通配符 *）
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (origin) {
