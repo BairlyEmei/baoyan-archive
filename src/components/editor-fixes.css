@@ -1,0 +1,199 @@
+.json-code-editor-container .cm-editor {
+    text-align: left !important;
+}
+
+/* Prevent Starlight prose styles from injecting margins into editor internals. */
+.json-code-editor-container .cm-editor div,
+.json-code-editor-container .cm-editor span {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.submit-form-root .editable-section,
+.submit-form-root .editable-subsection {
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 10px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.submit-form-root .editable-section {
+    margin-bottom: 20px !important;
+}
+
+.submit-form-root .editable-section:focus-within,
+.submit-form-root .editable-subsection:focus-within {
+    border-color: var(--ant-color-primary, var(--sl-color-accent));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ant-color-primary, var(--sl-color-accent)) 20%, transparent);
+}
+
+.submit-form-root .ant-form-item {
+    margin-bottom: 12px;
+}
+
+.submit-form-root .form-two-col-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+}
+
+.submit-form-root .form-two-col-grid .ant-form-item {
+    margin-bottom: 0;
+}
+
+.submit-form-root .grid-span-2 {
+    grid-column: 1 / -1;
+}
+
+.submit-form-root .list-stack {
+    display: grid;
+    gap: 12px;
+}
+
+.submit-form-root .doc-row-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.submit-form-root .doc-row-grid .ant-form-item {
+    margin-bottom: 0;
+}
+
+.submit-form-root .doc-row-action {
+    display: flex;
+    align-items: end;
+    padding-bottom: 1px;
+}
+
+.submit-form-root .section-action-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.submit-form-root .ant-card-head {
+    min-height: 42px;
+}
+
+.submit-form-root .editable-section>.ant-card-body,
+.submit-form-root .editable-subsection>.ant-card-body {
+    padding: 12px;
+}
+
+.submit-form-root .ant-divider {
+    margin: 12px 0;
+}
+
+.submit-form-root .ant-form-item-label {
+    padding-bottom: 4px;
+}
+
+.submit-form-root .ant-form-item-label>label {
+    width: 100%;
+}
+
+/* Starlight prose styles can leak margin-top into nested AntD row/col wrappers. */
+.submit-form-root .ant-row,
+.submit-form-root .ant-col,
+.submit-form-root .ant-form-item-row,
+.submit-form-root .ant-form-item-control {
+    margin-top: 0 !important;
+}
+
+/* Prevent internal control columns from stretching and creating uneven vertical rhythm. */
+.submit-form-root .ant-form-vertical .ant-form-item .ant-form-item-control {
+    flex-grow: 0;
+}
+
+@media (max-width: 768px) {
+    .submit-form-root .form-two-col-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .submit-form-root .doc-row-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .submit-form-root .doc-row-action {
+        justify-content: flex-start;
+        padding-bottom: 0;
+    }
+}
+
+.submit-form-root .ant-input,
+.submit-form-root .ant-input-affix-wrapper,
+.submit-form-root .ant-input-outlined,
+.submit-form-root .ant-input-textarea,
+.submit-form-root .ant-input-number,
+.submit-form-root .ant-select-selector {
+    border: 1px solid var(--sl-color-hairline) !important;
+    border-radius: 8px !important;
+    background: var(--sl-color-bg) !important;
+}
+
+.submit-form-root .ant-input:hover,
+.submit-form-root .ant-input-affix-wrapper:hover,
+.submit-form-root .ant-input-outlined:hover,
+.submit-form-root .ant-input-textarea:hover,
+.submit-form-root .ant-select-selector:hover {
+    border-color: var(--ant-color-primary, var(--sl-color-accent)) !important;
+}
+
+.submit-form-root .ant-input:focus,
+.submit-form-root .ant-input-focused,
+.submit-form-root .ant-input-affix-wrapper-focused,
+.submit-form-root .ant-select-focused .ant-select-selector,
+.submit-form-root .ant-input-textarea:focus-within {
+    border-color: var(--ant-color-primary, var(--sl-color-accent)) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ant-color-primary, var(--sl-color-accent)) 18%, transparent) !important;
+}
+
+.submit-form-root .btn-add,
+.submit-form-root .btn-parse,
+.submit-form-root .btn-delete {
+    border-radius: 8px !important;
+    transition: all 0.2s ease;
+}
+
+.submit-form-root .btn-add,
+.submit-form-root .btn-parse {
+    border-color: var(--ant-color-primary, var(--sl-color-accent)) !important;
+    color: var(--ant-color-primary, var(--sl-color-accent)) !important;
+    background: transparent !important;
+}
+
+.submit-form-root .btn-add:hover,
+.submit-form-root .btn-add:focus,
+.submit-form-root .btn-parse:hover,
+.submit-form-root .btn-parse:focus {
+    border-color: var(--ant-color-primary, var(--sl-color-accent)) !important;
+    background: var(--ant-color-primary, var(--sl-color-accent)) !important;
+    color: var(--sl-color-text-invert, #ffffff) !important;
+}
+
+.submit-form-root .btn-delete {
+    border-color: var(--ant-color-error) !important;
+    background: transparent !important;
+    color: var(--ant-color-error) !important;
+}
+
+.submit-form-root .btn-delete:hover,
+.submit-form-root .btn-delete:focus {
+    border-color: var(--ant-color-error) !important;
+    background: color-mix(in srgb, var(--ant-color-error) 10%, transparent) !important;
+    color: var(--ant-color-error) !important;
+}
+
+.submit-form-root .btn-delete.btn-delete-confirm {
+    border-color: var(--ant-color-error) !important;
+    background: var(--ant-color-error) !important;
+    color: #ffffff !important;
+}
+
+.submit-form-root .btn-delete.btn-delete-confirm:hover,
+.submit-form-root .btn-delete.btn-delete-confirm:focus {
+    border-color: var(--ant-color-error-hover) !important;
+    background: var(--ant-color-error-hover) !important;
+    color: #ffffff !important;
+}

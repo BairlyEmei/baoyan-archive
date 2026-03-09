@@ -8,7 +8,7 @@ export default defineConfig({
     starlight({
       title: '保研信息开源档案库',
       customCss: [
-        // 预留给未来自定义样式的入口
+        './src/styles/sidebar-fixes.css',
       ],
       sidebar: [
         {

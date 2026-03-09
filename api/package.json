@@ -9,8 +9,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
-    "@octokit/rest": "^22.0.1"
+    "@octokit/rest": "^22.0.1",
+    "nanoid": "^5.1.6"
   }
 }

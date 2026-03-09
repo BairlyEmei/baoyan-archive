@@ -1,0 +1,4 @@
+/* Sidebar-only arrow fix: keep native left triangle, hide right caret icon. */
+nav.sidebar .sidebar-pane .sidebar-content details>summary .caret {
+    display: none;
+}
