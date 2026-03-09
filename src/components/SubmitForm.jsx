@@ -429,7 +429,7 @@ export default function SubmitForm() {
 
                     <div style={{ marginBottom: 12 }}>
                         <Turnstile
-                            siteKey="1x00000000000000000000AA"
+                            siteKey={import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || "你的真实SITE_KEY"}
                             onSuccess={(token) => setTurnstileToken(token)}
                         />
                     </div>
