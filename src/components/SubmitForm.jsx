@@ -114,6 +114,8 @@ export default function SubmitForm() {
     const [parseSuccess, setParseSuccess] = useState('');
     const [formValues, setFormValues] = useState(defaultValues);
     const [pendingDelete, setPendingDelete] = useState(null);
+    const [authorName, setAuthorName] = useState('');
+    const [authorEmail, setAuthorEmail] = useState('');
     const [turnstileToken, setTurnstileToken] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitResult, setSubmitResult] = useState(null); // { type: 'success'|'error'|'fallback', message, prUrl? }
@@ -179,7 +181,7 @@ export default function SubmitForm() {
             const response = await fetch('/api/submit_pr', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ markdownContent, universityName, turnstileToken }),
+                body: JSON.stringify({ markdownContent, universityName, turnstileToken, authorName, authorEmail }),
             });
 
             const data = await response.json();
@@ -425,6 +427,30 @@ export default function SubmitForm() {
                         <Form.Item label="就读体验/导师风评/吐槽贴（每行一个）" name={['misc', 'notesLinks']}>
                             <Input.TextArea rows={3} />
                         </Form.Item>
+                    </Card>
+
+                    <Card title="5. 投稿署名" size="small" className="editable-section" style={{ marginBottom: 16 }}>
+                        <div className="form-two-col-grid">
+                            <div>
+                                <label htmlFor="author-name" style={{ display: 'block', marginBottom: 4 }}>署名（可匿名）</label>
+                                <Input
+                                    id="author-name"
+                                    placeholder="你的昵称或真实姓名，留空则显示为匿名"
+                                    value={authorName}
+                                    onChange={(e) => setAuthorName(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="author-email" style={{ display: 'block', marginBottom: 4 }}>邮箱（可选，仅用于联系）</label>
+                                <Input
+                                    id="author-email"
+                                    type="email"
+                                    placeholder="your@email.com"
+                                    value={authorEmail}
+                                    onChange={(e) => setAuthorEmail(e.target.value)}
+                                />
+                            </div>
+                        </div>
                     </Card>
 
                     <div style={{ marginBottom: 12 }}>
