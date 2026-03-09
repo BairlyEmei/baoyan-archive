@@ -1,0 +1,51 @@
+name: 档案提交流水线预检 (PR Check)
+
+# 触发条件：当有向 main 分支发起的 Pull Request 时触发
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'src/content/docs/统计专业档案/**.md' # 只监听档案目录下的 Markdown 变动
+
+jobs:
+  # 任务 1：Markdown 格式规范检查
+  markdown-lint:
+    name: 规范化排版检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 运行 Markdown Lint
+        uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          # 指定只检查修改的档案文件
+          globs: "src/content/docs/统计专业档案/*.md"
+        # 允许失败，这样即使格式有小瑕疵，也不会直接阻塞后续检查，由 Maintainer 决定
+        continue-on-error: true
+
+  # 任务 2：死链与官方网址有效性排查
+  link-checker:
+    name: 官方通知死链排查
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 运行 Lychee Link Checker
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # 扫描所有新提交的 Markdown 文件中的 URL
+          args: --verbose --no-progress './src/content/docs/统计专业档案/*.md'
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+      - name: 自动评论检查结果
+        # 如果链接检查失败，在 PR 下面自动评论提醒用户或维护者
+        if: failure()
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ⚠️ **自动化检测提醒**：我们在您提交的档案中发现了无法访问的网址（死链）。
+            请维护团队或提交者检查该院校的官方通知链接是否已更新或失效。详细信息请查看本次 Action 的 Logs。
