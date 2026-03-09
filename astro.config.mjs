@@ -9,6 +9,13 @@ export default defineConfig({
       title: '保研信息开源档案库',
       customCss: [
         './src/styles/sidebar-fixes.css',
+        './src/styles/copy-link-btn.css',
+      ],
+      head: [
+        {
+          tag: 'script',
+          attrs: { src: '/copy-links.js', defer: true },
+        },
       ],
       sidebar: [
         {
