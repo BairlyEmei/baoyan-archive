@@ -1,26 +1,31 @@
-// @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import react from '@astrojs/react';
 
 // https://astro.build/config
 export default defineConfig({
-	integrations: [
-		starlight({
-			title: 'My Docs',
-			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/withastro/starlight' }],
-			sidebar: [
-				{
-					label: 'Guides',
-					items: [
-						// Each item here is one entry in the navigation menu.
-						{ label: 'Example Guide', slug: 'guides/example' },
-					],
-				},
-				{
-					label: 'Reference',
-					autogenerate: { directory: 'reference' },
-				},
-			],
-		}),
-	],
+  integrations: [
+    starlight({
+      title: '保研信息开源档案库',
+      customCss: [
+        // 预留给未来自定义样式的入口
+      ],
+      sidebar: [
+        {
+          label: '首页',
+          link: '/',
+        },
+        {
+          label: '参与贡献',
+          link: '/contribute',
+        },
+        {
+          label: '统计专业档案',
+          // 这里的自动生成配置非常关键，它会自动读取我们之前创建的目录
+          autogenerate: { directory: '统计专业档案' },
+        },
+      ],
+    }),
+    react(),
+  ],
 });
