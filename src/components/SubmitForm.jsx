@@ -17,6 +17,8 @@ import './editor-fixes.css';
 import { parseAndValidateJson } from './JsonParser';
 import { serializeToMarkdown, toLineSeparatedText } from './MarkdownSerializer';
 
+const DRAFT_KEY = 'baoyan-submit-draft';
+
 const defaultValues = {
     basicInfo: {
         school: '',
@@ -119,6 +121,56 @@ export default function SubmitForm() {
     const [turnstileToken, setTurnstileToken] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitResult, setSubmitResult] = useState(null); // { type: 'success'|'error'|'fallback', message, prUrl? }
+    const [draftSavedAt, setDraftSavedAt] = useState(null);
+
+    // Load draft from localStorage on mount
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem(DRAFT_KEY);
+            if (saved) {
+                const draft = JSON.parse(saved);
+                if (draft.formValues) {
+                    form.setFieldsValue(draft.formValues);
+                    setFormValues(draft.formValues);
+                }
+                if (draft.authorName) setAuthorName(draft.authorName);
+                if (draft.authorEmail) setAuthorEmail(draft.authorEmail);
+                if (draft.rawJson) setRawJson(draft.rawJson);
+            }
+        } catch {
+            // ignore corrupted draft data
+        }
+    }, [form, setFormValues, setAuthorName, setAuthorEmail, setRawJson]);
+
+    // Auto-save draft to localStorage (debounced 500 ms) whenever form data changes
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            try {
+                localStorage.setItem(DRAFT_KEY, JSON.stringify({ formValues, authorName, authorEmail, rawJson }));
+                setDraftSavedAt(new Date());
+            } catch {
+                // ignore storage errors (e.g. private browsing quota exceeded)
+            }
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [formValues, authorName, authorEmail, rawJson]);
+
+    function handleClearDraft() {
+        try {
+            localStorage.removeItem(DRAFT_KEY);
+        } catch {
+            // ignore
+        }
+        form.resetFields();
+        setFormValues(defaultValues);
+        setAuthorName('');
+        setAuthorEmail('');
+        setRawJson('');
+        setDraftSavedAt(null);
+        setParseErrors([]);
+        setParseSuccess('');
+        setSubmitResult(null);
+    }
 
     useEffect(() => {
         const root = document.documentElement;
@@ -187,7 +239,8 @@ export default function SubmitForm() {
             const data = await response.json();
 
             if (response.ok) {
-                // HTTP 200：提交成功，展示 PR 链接
+                // HTTP 200：提交成功，展示 PR 链接，并清除草稿
+                try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
                 setSubmitResult({ type: 'success', message: data.message, prUrl: data.prUrl });
             } else if (response.status === 504 || response.status === 502 || data.fallback) {
                 // 容灾：自动触发本地下载，同时提示用户手动提交
@@ -254,6 +307,16 @@ export default function SubmitForm() {
                 <Typography.Paragraph>
                     先粘贴 AI 生成的 JSON，再在可视化表单中做最终核对。
                 </Typography.Paragraph>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+                    {draftSavedAt && (
+                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                            草稿已自动保存 · {draftSavedAt.toLocaleTimeString()}
+                        </Typography.Text>
+                    )}
+                    <Button size="small" danger onClick={handleClearDraft}>
+                        清除草稿
+                    </Button>
+                </div>
 
                 <Card title="JSON 输入区" size="small" className="editable-section" style={{ marginBottom: 16 }}>
                     <Space direction="vertical" style={{ width: '100%' }}>
