@@ -7,6 +7,9 @@ export default defineConfig({
   integrations: [
     starlight({
       title: '保研信息开源档案库',
+      components: {
+        Footer: './src/components/CustomFooter.astro',
+      },
       customCss: [
         './src/styles/sidebar-fixes.css',
         './src/styles/copy-link-btn.css',
@@ -16,6 +19,34 @@ export default defineConfig({
         {
           tag: 'script',
           attrs: { src: '/copy-links.js', defer: true },
+        },
+        {
+          tag: 'script',
+          content: `
+(function() {
+  var PLACEHOLDER = '搜索高校名称、专业或关键词...';
+  function applyPlaceholder() {
+    var inputs = document.querySelectorAll('input[type="search"], input[type="text"]');
+    inputs.forEach(function(el) {
+      if (!el.placeholder || el.placeholder === 'Search') {
+        el.placeholder = PLACEHOLDER;
+      }
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    applyPlaceholder();
+    // Watch for the search dialog being opened and set placeholder once it appears
+    var observer = new MutationObserver(function() {
+      applyPlaceholder();
+      // Disconnect once a search input with the correct placeholder is present
+      if (document.querySelector('input[placeholder="' + PLACEHOLDER + '"]')) {
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+})();
+`,
         },
       ],
       sidebar: [
