@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Alert,
     Button,
@@ -6,6 +6,8 @@ import {
     Divider,
     Form,
     Input,
+    Modal,
+    Radio,
     Space,
     Typography,
     ConfigProvider,
@@ -122,6 +124,7 @@ export default function SubmitForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitResult, setSubmitResult] = useState(null); // { type: 'success'|'error'|'fallback', message, prUrl? }
     const [draftSavedAt, setDraftSavedAt] = useState(null);
+    const [submissionType, setSubmissionType] = useState('new'); // 'new' | 'supplement'
 
     // Load draft from localStorage on mount
     useEffect(() => {
@@ -171,6 +174,44 @@ export default function SubmitForm() {
         setParseSuccess('');
         setSubmitResult(null);
     }
+
+    // 静默检查当前学校/学院是否已有档案（onBlur 触发）
+    const checkExistingArchive = useCallback(async () => {
+        const school = form.getFieldValue(['basicInfo', 'school']);
+        const college = form.getFieldValue(['basicInfo', 'college']);
+        if (!school || !college) return;
+
+        try {
+            const params = new URLSearchParams({ school, college });
+            const resp = await fetch(`/api/check_exists?${params}`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (!data.exists || !data.content) return;
+
+            Modal.confirm({
+                title: '发现已有历史档案',
+                content: '发现该学院已有历史档案。是否加载现有内容？加载后请在已有数据基础上进行补充或修正。',
+                okText: '加载已有档案',
+                cancelText: '保留当前内容',
+                onOk() {
+                    // 解析已有档案内容并填入表单
+                    try {
+                        const result = parseAndValidateJson(data.content);
+                        if (result.ok) {
+                            const normalized = normalizeIncomingData(result.data);
+                            form.setFieldsValue(normalized);
+                            setFormValues(normalized);
+                        }
+                    } catch {
+                        // 解析失败时静默忽略，不影响用户当前输入
+                    }
+                    setSubmissionType('supplement');
+                },
+            });
+        } catch {
+            // 网络异常降级：静默忽略，不阻塞正常提交流程
+        }
+    }, [form]);
 
     useEffect(() => {
         const root = document.documentElement;
@@ -224,6 +265,7 @@ export default function SubmitForm() {
 
     async function onSubmit() {
         const universityName = formValues.basicInfo.school;
+        const collegeName = formValues.basicInfo.college;
         const markdownContent = serializeToMarkdown(formValues);
 
         setIsSubmitting(true);
@@ -233,7 +275,7 @@ export default function SubmitForm() {
             const response = await fetch('/api/submit_pr', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ markdownContent, universityName, turnstileToken, authorName, authorEmail }),
+                body: JSON.stringify({ markdownContent, universityName, collegeName, turnstileToken, authorName, authorEmail, submissionType }),
             });
 
             const data = await response.json();
@@ -357,10 +399,10 @@ export default function SubmitForm() {
                     <Card title="1. 基础信息速览" size="small" className="editable-section" style={{ marginBottom: 16 }}>
                         <div className="form-two-col-grid">
                             <Form.Item label="学校名称" name={['basicInfo', 'school']}>
-                                <Input placeholder="学校名称" />
+                                <Input placeholder="学校名称" onBlur={checkExistingArchive} />
                             </Form.Item>
                             <Form.Item label="招生学院" name={['basicInfo', 'college']}>
-                                <Input placeholder="招生学院" />
+                                <Input placeholder="招生学院" onBlur={checkExistingArchive} />
                             </Form.Item>
                             <Form.Item label="招生方向" name={['basicInfo', 'track']}>
                                 <Input placeholder="招生方向" />
@@ -514,6 +556,13 @@ export default function SubmitForm() {
                                 />
                             </div>
                         </div>
+                    </Card>
+
+                    <Card title="提交意图" size="small" className="editable-section" style={{ marginBottom: 16 }}>
+                        <Radio.Group value={submissionType} onChange={(e) => setSubmissionType(e.target.value)}>
+                            <Radio value="new">全新创建（该学院还没有档案）</Radio>
+                            <Radio value="supplement">补充 / 纠错已有档案</Radio>
+                        </Radio.Group>
                     </Card>
 
                     <div style={{ marginBottom: 12 }}>

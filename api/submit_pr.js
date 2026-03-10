@@ -73,7 +73,7 @@ export default async function handler(req, res) {
   // ----------------------------------------------------------
   // 2. 请求体解析与字段空值校验
   // ----------------------------------------------------------
-  const { markdownContent, universityName, turnstileToken, authorName, authorEmail } = req.body;
+  const { markdownContent, universityName, turnstileToken, authorName, authorEmail, collegeName, submissionType } = req.body;
 
   if (!markdownContent || !universityName || !turnstileToken) {
     return res.status(400).json({
@@ -126,53 +126,96 @@ export default async function handler(req, res) {
       auth: process.env.GITHUB_PAT,
     });
 
-    const owner = 'BairlyEmei';
-    const repo = 'baoyan-archive';
+    const REPO_OWNER = 'BairlyEmei';
+    const REPO_NAME = 'baoyan-archive';
 
     // 4-2. 生成安全文件路径与动态唯一分支名
-    //      格式：submission-{大学名}-{时间戳}-{nanoid(8)}
-    //      nanoid(8) 提供额外随机性，彻底消除高并发下的分支名碰撞风险
-    const safeName = universityName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '');
+    //      使用 大学/学院.md 的嵌套目录结构
+    const school = universityName || '未知大学';
+    const college = collegeName || '';
+    const safeSchool = school.replace(/[^a-zA-Z0-9\u4e00-\u9fa5-]/g, '');
+    const safeCollege = college ? college.replace(/[^a-zA-Z0-9\u4e00-\u9fa5-]/g, '') : null;
+    const baseFilePath = safeCollege
+      ? `src/content/docs/统计专业档案/${safeSchool}/${safeCollege}.md`
+      : `src/content/docs/统计专业档案/${safeSchool}/index.md`;
+
     const uniqueSuffix = nanoid(8); // 例：V1St8X3Z
-    const branchName = `submission-${safeName}-${Date.now()}-${uniqueSuffix}`;
-    const filePath = `src/content/docs/统计专业档案/${safeName}.md`;
 
     // 4-3. 获取 main 分支最新 commit SHA（作为新分支的起点）
     const { data: refData } = await octokit.git.getRef({
-      owner,
-      repo,
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
       ref: 'heads/main',
     });
     const baseSha = refData.object.sha;
 
-    // 4-4. 基于 main 创建新的投稿分支
+    // 4-4. 文件存在性校验：检查 main 分支是否已有同路径文件
+    let fileExists = false;
+    try {
+      await octokit.repos.getContent({
+        owner: REPO_OWNER,
+        repo: REPO_NAME,
+        path: baseFilePath,
+        ref: 'main',
+      });
+      fileExists = true;
+    } catch (e) {
+      if (e.status !== 404) throw e;
+      fileExists = false;
+    }
+
+    // 4-5. 分支策略分流：根据文件存在性与提交意图决定路径和 PR 标题
+    //      若声明为"新增"但文件已存在，则以文件存在性校验为准走补充逻辑
+    const isSupplementFlow = fileExists || submissionType === 'supplement';
+    let filePath = baseFilePath;
+    let finalMarkdownContent = markdownContent;
+
+    if (isSupplementFlow && fileExists) {
+      // 文件已存在：重命名为补充文件，避免直接覆盖
+      const timestamp = new Date().toISOString().replace(/[:\-]/g, '').slice(0, 16) + 'Z';
+      const baseName = safeCollege || 'index';
+      filePath = `src/content/docs/统计专业档案/${safeSchool}/${baseName}_补充_${timestamp}.md`;
+      // 在 frontmatter 之后插入警告块
+      const originalFileName = safeCollege ? `${safeCollege}.md` : 'index.md';
+      const warningBlock = `\n> ⚠️ **[补充档案]** 此文件为对已有档案 \`${originalFileName}\` 的补充提交，请 Maintainer 手动将有效内容合并至主文件后删除本文件，切勿直接合并此 PR 而不检查原始档案！\n`;
+      // 在 frontmatter 结束符 "---" 之后插入警告块
+      finalMarkdownContent = markdownContent.replace(/^(---[\s\S]*?---\n)/, `$1${warningBlock}`);
+    }
+
+    const displayName = safeCollege ? `${safeSchool}-${safeCollege}` : safeSchool;
+    const prTitlePrefix = isSupplementFlow ? '[补充]' : '[新增]';
+    const branchName = `submission-${safeSchool}-${Date.now()}-${uniqueSuffix}`;
+
+    // 4-6. 基于 main 创建新的投稿分支
     await octokit.git.createRef({
-      owner,
-      repo,
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
       ref: `refs/heads/${branchName}`,
       sha: baseSha,
     });
 
-    // 4-5. 将 Markdown 内容提交到新分支（utf-8 处理防止中文 Base64 乱码）
+    // 4-7. 将 Markdown 内容提交到新分支（utf-8 处理防止中文 Base64 乱码）
     await octokit.repos.createOrUpdateFileContents({
-      owner,
-      repo,
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
       path: filePath,
-      message: `feat: 新增/更新 ${safeName} 保研档案`,
-      content: Buffer.from(markdownContent, 'utf-8').toString('base64'),
-                                                   branch: branchName,
+      message: `feat: ${prTitlePrefix} ${displayName} 保研档案`,
+      content: Buffer.from(finalMarkdownContent, 'utf-8').toString('base64'),
+      branch: branchName,
     });
 
     const { data: prData } = await octokit.pulls.create({
-      owner,
-      repo,
-      title: `📥 档案提交: ${safeName}`,
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      title: `📥 ${prTitlePrefix} 档案: ${displayName}`,
       head: branchName,
       base: 'main',
       body: [
         '## 📋 自动生成的档案提交',
         '',
+        `**提交类型：** ${prTitlePrefix}`,
         `**投稿院校：** ${universityName}`,
+        ...(collegeName ? [`**投稿学院：** ${collegeName}`] : []),
         `**文件路径：** \`${filePath}\``,
         `**提交分支：** \`${branchName}\``,
         `**投稿署名：** ${authorName || '匿名'}`,
