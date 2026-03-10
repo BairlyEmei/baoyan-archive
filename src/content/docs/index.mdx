@@ -1,17 +1,58 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
-template: splash # Remove or comment out this line to display the site sidebar on this page.
+title: 保研信息开源档案库
+description: 统计学专版 · 打破信息壁垒，共建公平保研生态
+template: splash
 hero:
-  tagline: Congrats on setting up a new Starlight project!
-  image:
-    file: ../../assets/houston.webp
+  tagline: 统计学专版 · 打破信息壁垒，共建公平保研生态
   actions:
-    - text: Example Guide
-      link: /guides/example/
+    - text: 浏览档案库
+      link: /统计专业档案/
       icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
-      icon: external
+      variant: primary
+    - text: 参与贡献
+      link: /contribute
+      icon: pencil
       variant: minimal
 ---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+<div class="home-intro">
+
+**保研信息开源档案库（统计学专版）** 是一个由保研人共同维护的开源数据平台，旨在打破信息壁垒，让每一位统计学学子都能公平获取高质量的保研信息。
+
+我们收录各高校统计学及相关专业的 **夏令营 / 预推免时间线**、**考核细节**（笔试范围、面试偏好、背景门槛）以及来自小红书、知乎等平台的 **真实经验帖**，全部开源、可持续维护。
+
+</div>
+
+## ✨ 平台特色
+
+<CardGrid stagger>
+  <Card title="专业数据模型" icon="document">
+    标准化的统计学保研信息格式，全面覆盖考核要求、时间线、招生规模等关键信息，让信息一目了然。
+  </Card>
+  <Card title="AI 辅助贡献" icon="pencil">
+    引入「AI 数据提取 + 可视化表单微调」工作流，无需懂代码，三步即可完成一份高质量档案提交。
+  </Card>
+  <Card title="完全开源透明" icon="github">
+    所有数据托管在 GitHub，版本可溯源，信息可验证。欢迎通过 Issue 指出错误或提交 PR 完善数据。
+  </Card>
+  <Card title="社区持续维护" icon="star">
+    由保研人共同建设，信息随每年招生季持续更新迭代，越用越全、越用越准。
+  </Card>
+</CardGrid>
+
+## 🚀 快速开始
+
+<CardGrid>
+  <LinkCard
+    title="📚 浏览统计学档案"
+    href="/统计专业档案/"
+    description="查看已收录的各高校统计学及相关专业保研档案"
+  />
+  <LinkCard
+    title="✏️ 贡献新档案"
+    href="/contribute"
+    description="按照标准操作流程，3 步提交一份高质量的保研信息档案"
+  />
+</CardGrid>

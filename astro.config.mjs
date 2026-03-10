@@ -10,6 +10,7 @@ export default defineConfig({
       customCss: [
         './src/styles/sidebar-fixes.css',
         './src/styles/copy-link-btn.css',
+        './src/styles/homepage.css',
       ],
       head: [
         {

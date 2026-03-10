@@ -1,0 +1,15 @@
+/* Homepage intro block */
+.home-intro {
+  margin: 2rem auto;
+  max-width: 72ch;
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--sl-color-gray-2);
+  text-align: center;
+}
+
+/* Center section headings only on the splash/hero pages */
+[data-has-hero] .sl-markdown-content h2 {
+  text-align: center;
+  margin-top: 3rem;
+}
