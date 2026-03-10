@@ -1,0 +1,46 @@
+name: PR 数据覆盖警告哨兵
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'src/content/docs/统计专业档案/**'
+
+jobs:
+  check-overwrite:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 检测是否修改了已有档案文件
+        id: detect
+        run: |
+          # 获取本次 PR 变更的文件列表
+          MODIFIED=$(git diff --name-only --diff-filter=M origin/${{ github.base_ref }}...HEAD -- 'src/content/docs/统计专业档案/**' | grep '\.md$' || true)
+          if [ -n "$MODIFIED" ]; then
+            echo "has_modified=true" >> $GITHUB_OUTPUT
+            echo "modified_files<<EOF" >> $GITHUB_OUTPUT
+            echo "$MODIFIED" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "has_modified=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 发表覆盖警告评论
+        if: steps.detect.outputs.has_modified == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const files = `${{ steps.detect.outputs.modified_files }}`;
+            const fileList = files.trim().split('\n').map(f => `- \`${f}\``).join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ⚠️ 数据覆盖警告\n\n此 PR 正在 **修改** 以下已存在的档案文件：\n\n${fileList}\n\n**请 Maintainer 务必：**\n1. 仔细检查 Diff，确认原有的重要链接、历史时间轴和经验贴**未被新提交者误删**。\n2. 若新内容为增量补充，请手动合并后再 Merge，不要直接 Squash。\n3. 若新内容存在错误，请关闭此 PR 并在评论中说明原因。`,
+            });
