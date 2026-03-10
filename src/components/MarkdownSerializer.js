@@ -9,13 +9,51 @@ function normalizeLinks(rawText) {
         .filter(Boolean);
 }
 
+/**
+ * Given a single entry (after trim), extract the URL and any anchor label
+ * that precedes it in the text.
+ *
+ * Returns { url, label }:
+ *   - url   – the raw URL extracted (or the whole item if no URL pattern found)
+ *   - label – text before the URL, or null when the default "链接X" label should be used
+ */
+function extractLinkParts(item) {
+    // Stop at whitespace or CJK/fullwidth characters so trailing Chinese text
+    // (e.g. "点击查看") is not absorbed into the URL.
+    const urlPattern = /https?:\/\/[^\s\u3000-\u9fff\uff00-\uffef]+/;
+    const match = urlPattern.exec(item);
+
+    if (!match) {
+        // No recognisable URL – treat the whole item as the URL (legacy behaviour)
+        return { url: item, label: null };
+    }
+
+    const url = match[0];
+    const textBefore = item.slice(0, match.index).trim();
+
+    if (textBefore) {
+        // There is meaningful text before the URL – use it as the anchor label;
+        // any trailing text after the URL is intentionally dropped.
+        return { url, label: textBefore };
+    }
+
+    // No text before the URL (pure link or URL-first entry) → default label
+    return { url, label: null };
+}
+
 function linksToInline(rawText) {
     const links = normalizeLinks(rawText);
     if (links.length === 0) {
         return '（留空）';
     }
 
-    return links.map((url, idx) => `[链接${idx + 1}](${url})`).join(' | ');
+    return links
+        .map((item, idx) => {
+            const { url, label } = extractLinkParts(item);
+            const displayLabel = label || `链接${idx + 1}`;
+            return `[${displayLabel}](${url})`;
+        })
+        .join(' | ');
 }
 
 function otherDocsToLine(otherDocs = []) {
