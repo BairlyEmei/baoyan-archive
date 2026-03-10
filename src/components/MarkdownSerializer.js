@@ -83,7 +83,7 @@ function buildFrontmatter(formData) {
     const school = formData?.basicInfo?.school?.trim() || '未命名院校';
     const track = formData?.basicInfo?.track?.trim() || '统计专业档案';
     const college = formData?.basicInfo?.college?.trim() || '未知学院';
-    const title = `${school} - ${track}`;
+    const title = `${school} - ${college}`;
     const description = `${school}${college}${track}信息归档`;
 
     return `---\n` +
