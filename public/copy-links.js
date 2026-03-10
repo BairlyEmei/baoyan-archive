@@ -7,6 +7,9 @@
   'use strict';
 
   function addCopyButtons() {
+    // 首页（splash 模板）不添加复制按钮
+    if (document.querySelector('[data-has-hero]')) return;
+
     // 仅在文章正文区域操作，避免污染导航栏、侧边栏等
     var article = document.querySelector('.sl-markdown-content');
     if (!article) return;
