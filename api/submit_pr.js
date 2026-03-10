@@ -9,7 +9,7 @@ const ALLOWED_ORIGINS = [
   'http://localhost:4321',             // Astro 本地开发默认端口
   'http://localhost:3000',             // 备用本地端口
   'https://baoyan-archive.vercel.app', // Vercel 生产域名
-  'https://www.your-custom-domain.com' // 正式生产主域名
+  'https://stat-archive.bairly.me' // 正式生产主域名
 ];
 
 // 允许所有 Vercel 预览部署子域名（*.vercel.app）
