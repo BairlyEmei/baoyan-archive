@@ -13,3 +13,45 @@
   text-align: center;
   margin-top: 3rem;
 }
+
+/* ─── Mobile adaptations ─────────────────────────────────────── */
+
+/* Ensure body / prose text is never below 16px on mobile */
+@media (max-width: 768px) {
+  .home-intro {
+    font-size: 1rem; /* ≥16px */
+  }
+
+  /* Hero action buttons: min touch target 44×44px */
+  .hero .sl-flex.actions a,
+  .hero .action,
+  [data-has-hero] .hero a.sl-button,
+  .hero .action-link {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.75rem 1.25rem;
+    font-size: 1rem;
+  }
+
+  /* Adequate gap between hero buttons to avoid mis-taps */
+  .hero .sl-flex.actions,
+  .hero .actions {
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* Four feature cards → single column on mobile */
+  .card-grid,
+  starlight-card-grid,
+  .sl-markdown-content .card-grid,
+  [data-has-hero] .sl-markdown-content .card-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Ensure markdown content font size ≥ 16px */
+  .sl-markdown-content p,
+  .sl-markdown-content li {
+    font-size: 1rem;
+  }
+}

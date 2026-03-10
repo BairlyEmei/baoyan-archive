@@ -1,9 +1,9 @@
 ---
 title: 保研信息开源档案库
-description: 统计学专版 · 打破信息壁垒，共建公平保研生态
+description: 统计学专版 · 开源、透明、可验证的保研信息库
 template: splash
 hero:
-  tagline: 统计学专版 · 打破信息壁垒，共建公平保研生态
+  tagline: 统计学专版 · 开源、透明、可验证的保研信息库
   actions:
     - text: 浏览档案库
       link: /统计专业档案/
@@ -19,7 +19,7 @@ import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 <div class="home-intro">
 
-**保研信息开源档案库（统计学专版）** 是一个由保研人共同维护的开源数据平台，旨在打破信息壁垒，让每一位统计学学子都能公平获取高质量的保研信息。
+**保研信息开源档案库（统计学专版）** 是一个由保研人共同维护的开源数据库，系统收录并结构化整理了统计学专业的保研信息。
 
 我们收录各高校统计学及相关专业的 **夏令营 / 预推免时间线**、**考核细节**（笔试范围、面试偏好、背景门槛）以及来自小红书、知乎等平台的 **真实经验帖**，全部开源、可持续维护。
 
@@ -35,10 +35,10 @@ import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
     引入「AI 数据提取 + 可视化表单微调」工作流，无需懂代码，三步即可完成一份高质量档案提交。
   </Card>
   <Card title="完全开源透明" icon="github">
-    所有数据托管在 GitHub，版本可溯源，信息可验证。欢迎通过 Issue 指出错误或提交 PR 完善数据。
+    所有数据托管在 <a href="https://github.com/BairlyEmei/baoyan-archive" target="_blank" rel="noopener noreferrer">GitHub</a>，版本可溯源，信息可验证。欢迎通过 Issue 指出错误或提交 PR 完善数据。
   </Card>
   <Card title="社区持续维护" icon="star">
-    由保研人共同建设，信息随每年招生季持续更新迭代，越用越全、越用越准。
+    随招生季动态更新，历史数据可追溯，当前数据由社区成员共同校验。
   </Card>
 </CardGrid>
 
@@ -54,5 +54,10 @@ import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
     title="✏️ 贡献新档案"
     href="/contribute"
     description="按照标准操作流程，3 步提交一份高质量的保研信息档案"
+  />
+  <LinkCard
+    title="⭐ GitHub 仓库"
+    href="https://github.com/BairlyEmei/baoyan-archive"
+    description="查看源代码、提交 Issue 或 Pull Request"
   />
 </CardGrid>

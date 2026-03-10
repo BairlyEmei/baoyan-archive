@@ -1,0 +1,70 @@
+---
+// Custom footer override for Starlight
+---
+
+<footer class="custom-footer">
+  <div class="custom-footer__inner">
+    <div class="custom-footer__row">
+      <span class="custom-footer__status">
+        🚧 Currently in Beta — data is continuously being updated
+      </span>
+    </div>
+    <div class="custom-footer__row">
+      <span class="custom-footer__contributors">
+        Main contributors: <strong>bairly</strong>, <strong>sheyiyuan</strong> &amp; community members
+      </span>
+    </div>
+    <div class="custom-footer__row">
+      <span class="custom-footer__contact">
+        Feedback &amp; contact:
+        <a href="mailto:bairlyemei@gmail.com">bairlyemei@gmail.com</a>
+        &nbsp;·&nbsp;
+        <a href="https://github.com/BairlyEmei/baoyan-archive" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
+      </span>
+    </div>
+    <div class="custom-footer__row custom-footer__copy">
+      © {new Date().getFullYear()} baoyan-archive · Open-source statistics postgraduate admissions archive · Licensed under MIT
+    </div>
+  </div>
+</footer>
+
+<style>
+  .custom-footer {
+    border-top: 1px solid var(--sl-color-hairline);
+    padding: 1.5rem 1rem;
+    margin-top: 2rem;
+    text-align: center;
+  }
+
+  .custom-footer__inner {
+    max-width: 72ch;
+    margin: 0 auto;
+  }
+
+  .custom-footer__row {
+    margin: 0.35rem 0;
+    font-size: 0.85rem;
+    color: var(--sl-color-gray-3);
+    line-height: 1.6;
+  }
+
+  .custom-footer__row a {
+    color: var(--sl-color-accent);
+    text-decoration: none;
+  }
+
+  .custom-footer__row a:hover {
+    text-decoration: underline;
+  }
+
+  .custom-footer__copy {
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--sl-color-gray-4);
+  }
+
+  .custom-footer__status {
+    font-weight: 500;
+    color: var(--sl-color-orange, #e67e22);
+  }
+</style>
