@@ -368,7 +368,6 @@
   function createTocExportBtn() {
     var btn = document.createElement('button');
     btn.type = 'button';
-    // 增加一个额外的类名以便通过 CSS 进行绝对定位
     btn.className = 'export-json-btn export-json-btn--toc export-json-btn--mobile-corner';
     btn.textContent = '导出 JSON';
 
@@ -456,25 +455,16 @@
       }
     }
 
-    // 移动端：精准定位注入
+    // 移动端：注入到 summary（On this page 行）的最右侧
     if (!document.querySelector('.export-json-btn--mobile-corner')) {
       var mobileTocContainer = document.querySelector('mobile-starlight-toc');
       var mobileNav = mobileTocContainer ? mobileTocContainer.querySelector('nav') : null;
+      var mobileSummary = mobileNav ? mobileNav.querySelector('details > summary') : null;
 
-      if (mobileTocContainer && mobileNav) {
-        // 让 nav 成为绝对定位的参考容器
-        mobileNav.style.position = 'relative';
-
+      if (mobileSummary) {
         var mobileBtn = createTocExportBtn();
-        // 设置绝对定位，使其出现在 nav 容器的右上角（与 On this page 同行）
-        mobileBtn.style.position = 'absolute';
-        mobileBtn.style.right = '0';
-        mobileBtn.style.top = '0';
-        // Starlight 移动端的 nav 顶部通常会有一个 summary，调整 margin-top 使其垂直居中对齐
-        mobileBtn.style.marginTop = '4px';
-
-        // 挂载到 nav 下，而不是 summary 里，彻底避免点击冲突
-        mobileNav.appendChild(mobileBtn);
+        // CSS 的 margin-inline-start: auto 已处理靠右对齐，无需内联样式
+        mobileSummary.appendChild(mobileBtn);
       }
     }
   }
