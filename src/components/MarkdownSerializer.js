@@ -1,12 +1,49 @@
+/**
+ * Split text by pipe (|) or newline, but do not split inside 【...】 brackets.
+ * This avoids breaking Xiaohongshu (小红书) PC share text that contains
+ * "【title | 小红书 - ...】" into two fragments.
+ */
+function smartSplitLinks(text) {
+    const results = [];
+    let current = '';
+    let depth = 0;
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === '【') {
+            depth++;
+            current += char;
+        } else if (char === '】') {
+            depth = Math.max(0, depth - 1);
+            current += char;
+        } else if ((char === '|' || char === '\n') && depth === 0) {
+            const trimmed = current.trim();
+            if (trimmed) results.push(trimmed);
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    const trimmed = current.trim();
+    if (trimmed) results.push(trimmed);
+    return results;
+}
+
 function normalizeLinks(rawText) {
     if (!rawText) {
         return [];
     }
 
-    return String(rawText)
-        .split(/\n|\|/)
-        .map((item) => item.trim())
-        .filter(Boolean);
+    return smartSplitLinks(String(rawText));
+}
+
+/**
+ * Decode common HTML entities inside a URL string (e.g. &amp; → &).
+ * Uses a single-pass replacement to avoid double-decoding chained entities.
+ */
+function decodeHtmlEntities(str) {
+    const map = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
+    return str.replace(/&(?:amp|lt|gt|quot|#39);/g, (m) => map[m] ?? m);
 }
 
 /**
@@ -28,10 +65,17 @@ function extractLinkParts(item) {
         return { url: item, label: null };
     }
 
-    const url = match[0];
+    const url = decodeHtmlEntities(match[0]);
     const textBefore = item.slice(0, match.index).trim();
 
     if (textBefore) {
+        // Try to extract a clean label from Xiaohongshu PC share text.
+        // Expected format: "N 【post-title - author | 小红书 - platform-name】 emoji ..."
+        // Group 1 = post title (before the first " - author" or " | 小红书" inside 【...】).
+        const xhsMatch = /^\d*\s*【([^|】]+?)(?:\s*[-–]\s*[^|】]+)?(?:\s*\|[^】]+)?】/.exec(textBefore);
+        if (xhsMatch) {
+            return { url, label: xhsMatch[1].trim() };
+        }
         // There is meaningful text before the URL – use it as the anchor label;
         // any trailing text after the URL is intentionally dropped.
         return { url, label: textBefore };
@@ -92,7 +136,7 @@ function buildFrontmatter(formData) {
         `---`;
 }
 
-export function serializeToMarkdown(formData) {
+export function serializeToMarkdown(formData, authorName) {
     const basicInfo = formData?.basicInfo || {};
     const timeline = formData?.timeline || {};
     const summer = timeline.summer || {};
@@ -118,6 +162,10 @@ export function serializeToMarkdown(formData) {
             .join('\n\n')
         : '### 方向A：【请补充方向名称】\n* **预计招生规模：** （留空）';
 
+    const attribution = authorName?.trim()
+        ? `\n\n---\n\n<small>信息收集与整理：${authorName.trim()}</small>`
+        : '';
+
     return `${frontmatter}
 
 ## 1. 基础信息速览
@@ -142,7 +190,7 @@ export function serializeToMarkdown(formData) {
 ${section3}
 
 ## 4. 其他碎碎念与避雷贴
-* **就读体验/导师风评/吐槽贴：** ${linksToInline(misc.notesLinks)}`;
+* **就读体验/导师风评/吐槽贴：** ${linksToInline(misc.notesLinks)}${attribution}`;
 }
 
 export function toLineSeparatedText(value) {
@@ -151,4 +199,68 @@ export function toLineSeparatedText(value) {
     }
 
     return value || '';
+}
+
+/**
+ * Convert the current form state to a structured JSON object suitable for
+ * archiving or re-importing via the JSON input area.  Link fields (which are
+ * stored as newline-separated strings in form state) are converted to URL
+ * arrays, and an optional attribution (署名) field is included.
+ */
+export function serializeToJson(formData, authorName) {
+    const timeline = formData?.timeline || {};
+    const summer = timeline.summer || {};
+    const prePush = timeline.prePush || {};
+
+    const toUrlArray = (raw) =>
+        normalizeLinks(raw)
+            .map((item) => extractLinkParts(item).url)
+            .filter((u) => /^https?:\/\//.test(u));
+
+    const otherDocs = (timeline.otherDocs || [])
+        .filter((doc) => doc && (doc.title || doc.url))
+        .map((doc) => ({ title: doc.title?.trim() || '', url: doc.url?.trim() || '' }));
+
+    const assessments = (formData?.assessments || []).map((item) => ({
+        name: item.name || '',
+        enrollment: item.enrollment || '',
+        format: item.format || '',
+        writtenScope: item.writtenScope || '',
+        bar: item.bar || '',
+        interviewPreference: item.interviewPreference || '',
+        experienceLinks: toUrlArray(item.experienceLinks),
+        admissionListLinks: toUrlArray(item.admissionListLinks),
+        interviewLinks: toUrlArray(item.interviewLinks),
+        examLinks: toUrlArray(item.examLinks),
+    }));
+
+    const obj = {
+        basicInfo: {
+            school: formData?.basicInfo?.school || '',
+            college: formData?.basicInfo?.college || '',
+            track: formData?.basicInfo?.track || '',
+            degree: formData?.basicInfo?.degree || '',
+            length: formData?.basicInfo?.length || '',
+        },
+        timeline: {
+            website: timeline.website || '',
+            summer: {
+                publish: summer.publish || '',
+                deadline: summer.deadline || '',
+                notices: toUrlArray(summer.notices),
+            },
+            prePush: {
+                publish: prePush.publish || '',
+                notices: toUrlArray(prePush.notices),
+            },
+            ...(otherDocs.length ? { otherDocs } : {}),
+        },
+        assessments,
+        misc: {
+            notesLinks: toUrlArray(formData?.misc?.notesLinks),
+        },
+        attribution: authorName?.trim() || '匿名',
+    };
+
+    return JSON.stringify(obj, null, 2);
 }

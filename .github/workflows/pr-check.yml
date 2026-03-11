@@ -28,6 +28,9 @@ jobs:
   link-checker:
     name: 官方通知死链排查
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -36,7 +39,8 @@ jobs:
         uses: lycheeverse/lychee-action@v2
         with:
           # 扫描所有新提交的 Markdown 文件中的 URL
-          args: --verbose --no-progress './src/content/docs/统计专业档案/*.md'
+          # 忽略以 / 开头的内部绝对路径链接（如 /docs/...）
+          args: --verbose --no-progress --exclude '^/' './src/content/docs/统计专业档案/*.md'
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 

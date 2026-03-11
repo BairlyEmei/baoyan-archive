@@ -17,7 +17,7 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import MarkdownIt from 'markdown-it';
 import './editor-fixes.css';
 import { parseAndValidateJson } from './JsonParser';
-import { serializeToMarkdown, toLineSeparatedText } from './MarkdownSerializer';
+import { serializeToMarkdown, serializeToJson, toLineSeparatedText } from './MarkdownSerializer';
 
 const DRAFT_KEY = 'baoyan-submit-draft';
 
@@ -125,6 +125,7 @@ export default function SubmitForm() {
     const [submitResult, setSubmitResult] = useState(null); // { type: 'success'|'error'|'fallback', message, prUrl? }
     const [draftSavedAt, setDraftSavedAt] = useState(null);
     const [submissionType, setSubmissionType] = useState('new'); // 'new' | 'supplement'
+    const [jsonCopied, setJsonCopied] = useState(false);
 
     // Load draft from localStorage on mount
     useEffect(() => {
@@ -234,8 +235,9 @@ export default function SubmitForm() {
         []
     );
 
-    const markdownPreview = useMemo(() => serializeToMarkdown(formValues), [formValues]);
+    const markdownPreview = useMemo(() => serializeToMarkdown(formValues, authorName), [formValues, authorName]);
     const renderedMarkdownHtml = useMemo(() => md.render(markdownPreview), [md, markdownPreview]);
+    const jsonPreview = useMemo(() => serializeToJson(formValues, authorName), [formValues, authorName]);
 
     function handleJsonParse() {
         const result = parseAndValidateJson(rawJson);
@@ -263,10 +265,38 @@ export default function SubmitForm() {
         URL.revokeObjectURL(url);
     }
 
+    async function handleCopyJson() {
+        try {
+            await navigator.clipboard.writeText(jsonPreview);
+            setJsonCopied(true);
+            setTimeout(() => setJsonCopied(false), 2000);
+        } catch {
+            // Clipboard API unavailable – fall back to the legacy execCommand approach
+            try {
+                const textarea = document.createElement('textarea');
+                textarea.value = jsonPreview;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                setJsonCopied(true);
+                setTimeout(() => setJsonCopied(false), 2000);
+            } catch {
+                // Both methods failed – inform the user to copy manually
+                setJsonCopied(false);
+                // eslint-disable-next-line no-alert
+                window.alert('自动复制失败，请手动选中下方 JSON 内容后复制。');
+            }
+        }
+    }
+
     async function onSubmit() {
         const universityName = formValues.basicInfo.school;
         const collegeName = formValues.basicInfo.college;
-        const markdownContent = serializeToMarkdown(formValues);
+        const markdownContent = serializeToMarkdown(formValues, authorName);
 
         setIsSubmitting(true);
         setSubmitResult(null);
@@ -395,6 +425,13 @@ export default function SubmitForm() {
                     initialValues={defaultValues}
                     onFinish={onSubmit}
                     onValuesChange={(_, allValues) => setFormValues(allValues)}
+                    onKeyDown={(e) => {
+                        // Prevent Enter from triggering form submission in single-line inputs.
+                        // TextArea fields handle their own Enter key (newline insertion).
+                        if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                            e.preventDefault();
+                        }
+                    }}
                 >
                     <Card title="1. 基础信息速览" size="small" className="editable-section" style={{ marginBottom: 16 }}>
                         <div className="form-two-col-grid">
@@ -497,7 +534,7 @@ export default function SubmitForm() {
                                                     <Input placeholder="如有无英文面试" />
                                                 </Form.Item>
                                                 <Form.Item className="grid-span-2" label="综合经验贴（每行一个）" name={[field.name, 'experienceLinks']}>
-                                                    <Input placeholder="多方向综合贴统一放第一个方向下" />
+                                                    <Input.TextArea rows={2} placeholder="多方向综合贴统一放第一个方向下" />
                                                 </Form.Item>
                                                 <Form.Item className="grid-span-2" label="优营/预推免名单贴（每行一个）" name={[field.name, 'admissionListLinks']}>
                                                     <Input.TextArea rows={2} />
@@ -643,6 +680,32 @@ export default function SubmitForm() {
                     >
                         {markdownPreview}
                     </pre>
+                </Card>
+
+                <Card title="已归档文档 JSON" size="small" style={{ marginTop: 16 }}>
+                    <Space direction="vertical" style={{ width: '100%' }}>
+                        <pre
+                            style={{
+                                maxHeight: 280,
+                                overflow: 'auto',
+                                margin: 0,
+                                padding: 12,
+                                borderRadius: 6,
+                                border: '1px solid var(--sl-color-hairline)',
+                                background: 'var(--sl-color-bg)',
+                            }}
+                        >
+                            {jsonPreview}
+                        </pre>
+                        <Space align="center" wrap>
+                            <Button onClick={handleCopyJson}>
+                                {jsonCopied ? '✅ 已复制' : '复制 JSON'}
+                            </Button>
+                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                若需修改或导出，请复制 JSON 到「参与贡献」板块
+                            </Typography.Text>
+                        </Space>
+                    </Space>
                 </Card>
             </section>
         </ConfigProvider>

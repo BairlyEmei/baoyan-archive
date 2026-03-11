@@ -97,6 +97,7 @@ export const submissionSchema = {
             },
             additionalProperties: false,
         },
+        attribution: { type: 'string' },
     },
     required: ['basicInfo', 'timeline', 'assessments', 'misc'],
     additionalProperties: false,
