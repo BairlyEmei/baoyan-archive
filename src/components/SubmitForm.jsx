@@ -538,32 +538,36 @@ export default function SubmitForm() {
                     </Card>
 
                     <Card title="4. 其他碎碎念与避雷贴" size="small" className="editable-section" style={{ marginBottom: 16 }}>
-                        <Form.Item label="就读体验/导师风评/吐槽贴（每行一个）" name={['misc', 'notesLinks']}>
+                        <Form.Item label="就读体验/吐槽贴（每行一个）" name={['misc', 'notesLinks']}>
                             <Input.TextArea rows={3} />
                         </Form.Item>
                     </Card>
 
                     <Card title="5. 投稿署名" size="small" className="editable-section" style={{ marginBottom: 16 }}>
-                        <div className="form-two-col-grid">
-                            <div>
-                                <label htmlFor="author-name" style={{ display: 'block', marginBottom: 4 }}>署名（可匿名）</label>
-                                <Input
-                                    id="author-name"
-                                    placeholder="你的昵称或真实姓名，留空则显示为匿名"
-                                    value={authorName}
-                                    onChange={(e) => setAuthorName(e.target.value)}
-                                />
+                        {/* 关键修复：加入 alignItems: 'flex-end'，强制底部（即输入框）对齐 */}
+                        <div
+                        className="form-two-col-grid"
+                        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'flex-end' }}
+                        >
+                            <div style={{ width: '100%' }}>
+                            <label htmlFor="author-name" style={{ display: 'block', marginBottom: 4 }}>署名（可匿名）</label>
+                            <Input
+                            id="author-name"
+                            placeholder="你的昵称或真实姓名，留空则显示为匿名"
+                            value={authorName}
+                            onChange={(e) => setAuthorName(e.target.value)}
+                            />
                             </div>
-                            <div>
+                                <div style={{ width: '100%' }}>
                                 <label htmlFor="author-email" style={{ display: 'block', marginBottom: 4 }}>邮箱（可选，仅用于联系）</label>
                                 <Input
-                                    id="author-email"
-                                    type="email"
-                                    placeholder="your@email.com"
-                                    value={authorEmail}
-                                    onChange={(e) => setAuthorEmail(e.target.value)}
+                                id="author-email"
+                                type="email"
+                                placeholder="your@email.com"
+                                value={authorEmail}
+                                onChange={(e) => setAuthorEmail(e.target.value)}
                                 />
-                            </div>
+                                </div>
                         </div>
                     </Card>
 
@@ -580,17 +584,33 @@ export default function SubmitForm() {
                             onSuccess={(token) => setTurnstileToken(token)}
                         />
                     </div>
-                    <div className="form-two-col-grid" style={{ marginBottom: 12 }}>
+                    {/* 父容器使用 flex，默认就是靠左对齐 (justify-content: flex-start) */}
+                    <div style={{ display: 'flex', gap: '16px', marginBottom: 12 }}>
                         <Button
-                            htmlType="submit"
-                            type="primary"
-                            loading={isSubmitting}
-                            disabled={!turnstileToken}
-                            block
+                        htmlType="submit"
+                        type="primary"
+                        loading={isSubmitting}
+                        disabled={!turnstileToken}
+                        size="small"        {/* 保持小尺寸 */}
+                        style={{
+                            height: '32px', {/* 锁定高度，保证垂直绝对对齐 */}
+                            display: 'flex',
+                            alignItems: 'center'
+                        }}
                         >
-                            提交投稿
+                        提交投稿
                         </Button>
-                        <Button onClick={handleDownload} block>下载 Markdown</Button>
+                        <Button
+                        onClick={handleDownload}
+                        size="small"
+                        style={{
+                            height: '32px',
+                            display: 'flex',
+                            alignItems: 'center'
+                        }}
+                        >
+                        下载 Markdown
+                        </Button>
                     </div>
                     {submitResult?.type === 'success' && (
                         <Alert
