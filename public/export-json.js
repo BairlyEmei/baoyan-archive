@@ -7,14 +7,29 @@
 (function () {
   'use strict';
 
-  // ─── 仅在归档文档页运行 ───────────────────────────────────────
+  // ─── 仅在具体的归档文档页运行，排除 index 主页 ─────────────────────
   function isArchivePage() {
+    var path = window.location.pathname;
     try {
-      var decoded = decodeURIComponent(window.location.pathname);
-      return decoded.includes('/统计专业档案/');
-    } catch (_) {
-      return window.location.pathname.includes('/统计专业档案/');
+      path = decodeURIComponent(path);
+    } catch (_) {}
+
+    // 如果根本不在这个专业目录下，直接返回 false
+    if (!path.includes('/统计专业档案/')) {
+      return false;
     }
+
+    // 格式化路径：去掉末尾可能存在的斜杠 "/" 或 "index.html"
+    var normalizedPath = path.replace(/\/index\.html$/, '').replace(/\/$/, '');
+
+    // 如果去掉末尾的斜杠后，路径恰好是以 "/统计专业档案" 结尾，
+    // 说明当前处于该专业的 index 主页，不需要显示按钮
+    if (normalizedPath.endsWith('/统计专业档案')) {
+      return false;
+    }
+
+    // 只有在具体的院校子页面（例如 /统计专业档案/北京大学/）才会返回 true
+    return true;
   }
 
   // ─── 工具函数：提取列表项中 <strong> 后的文本 ────────────────
@@ -353,12 +368,14 @@
   function createTocExportBtn() {
     var btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'export-json-btn export-json-btn--toc';
+    // 增加一个额外的类名以便通过 CSS 进行绝对定位
+    btn.className = 'export-json-btn export-json-btn--toc export-json-btn--mobile-corner';
     btn.textContent = '导出 JSON';
 
     btn.addEventListener('click', function (e) {
-      // 阻止触发 <details> 展开/折叠
-      e.stopPropagation();
+      e.stopPropagation(); // 防止事件冒泡
+      e.preventDefault();  // 防止默认行为
+
       var data = parseArchivePageToJson();
       if (!data) {
         // eslint-disable-next-line no-alert
@@ -390,23 +407,38 @@
   // ─── 显示复制成功提示 ─────────────────────────────────────────
   function showTocCopyToast() {
     // 与 CSS .export-json-toast { transition: opacity 0.2s ease } 保持一致
-    var TOAST_FADE_DURATION = 300; // ms，略大于 CSS transition 时长以确保动画完成
+    var TOAST_FADE_DURATION = 300;
 
     var existing = document.querySelector('.export-json-toast');
     if (existing) existing.remove();
 
     var toast = document.createElement('div');
     toast.className = 'export-json-toast';
-    toast.textContent = '已复制 JSON，可粘贴到「参与贡献」板块进行修改投稿';
+    toast.textContent = '✅ 复制成功！可粘贴到「参与贡献」板块';
+    // 直接用内联样式覆盖，确保在移动端底部居中显示
+    toast.style.position = 'fixed';
+    toast.style.bottom = '15%';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+    toast.style.color = '#fff';
+    toast.style.padding = '10px 16px';
+    toast.style.borderRadius = '8px';
+    toast.style.fontSize = '14px';
+    toast.style.zIndex = '9999';
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease';
+    toast.style.pointerEvents = 'none';
+
     document.body.appendChild(toast);
 
     // 触发渐显动画
     requestAnimationFrame(function () {
-      toast.classList.add('export-json-toast--visible');
+      toast.style.opacity = '1';
     });
 
     setTimeout(function () {
-      toast.classList.remove('export-json-toast--visible');
+      toast.style.opacity = '0';
       setTimeout(function () { toast.remove(); }, TOAST_FADE_DURATION);
     }, 2500);
   }
@@ -415,22 +447,34 @@
   function injectExportWidget() {
     if (!isArchivePage()) return;
 
-    // 桌面端：幂等检查
-    if (document.querySelector('.export-json-widget--desktop')) return;
-
-    // 桌面端：插入到 starlight-toc 之后（右侧边栏）
-    var toc = document.querySelector('starlight-toc');
-    if (toc) {
-      var desktopWidget = createExportWidget('export-json-widget--desktop');
-      toc.insertAdjacentElement('afterend', desktopWidget);
+    // 桌面端：幂等检查与注入
+    if (!document.querySelector('.export-json-widget--desktop')) {
+      var toc = document.querySelector('starlight-toc');
+      if (toc) {
+        var desktopWidget = createExportWidget('export-json-widget--desktop');
+        toc.insertAdjacentElement('afterend', desktopWidget);
+      }
     }
 
-    // 移动端：插入到 mobile TOC summary 右端
-    if (!document.querySelector('.export-json-btn--toc')) {
-      var mobileSummary = document.querySelector('mobile-starlight-toc summary');
-      if (mobileSummary) {
+    // 移动端：精准定位注入
+    if (!document.querySelector('.export-json-btn--mobile-corner')) {
+      var mobileTocContainer = document.querySelector('mobile-starlight-toc');
+      var mobileNav = mobileTocContainer ? mobileTocContainer.querySelector('nav') : null;
+
+      if (mobileTocContainer && mobileNav) {
+        // 让 nav 成为绝对定位的参考容器
+        mobileNav.style.position = 'relative';
+
         var mobileBtn = createTocExportBtn();
-        mobileSummary.appendChild(mobileBtn);
+        // 设置绝对定位，使其出现在 nav 容器的右上角（与 On this page 同行）
+        mobileBtn.style.position = 'absolute';
+        mobileBtn.style.right = '0';
+        mobileBtn.style.top = '0';
+        // Starlight 移动端的 nav 顶部通常会有一个 summary，调整 margin-top 使其垂直居中对齐
+        mobileBtn.style.marginTop = '4px';
+
+        // 挂载到 nav 下，而不是 summary 里，彻底避免点击冲突
+        mobileNav.appendChild(mobileBtn);
       }
     }
   }
