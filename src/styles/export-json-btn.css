@@ -54,34 +54,52 @@
   display: block;
 }
 
-/* 桌面端（>= 72rem）：右侧边栏版本可见，移动端版本隐藏 */
+/* 桌面端（>= 72rem）：右侧边栏版本可见，移动端 TOC 按钮隐藏 */
 @media (min-width: 72rem) {
-  .export-json-widget--mobile {
+  .export-json-btn--toc {
     display: none;
   }
 }
 
-/* 移动端（< 72rem）：右侧边栏隐藏，移动端版本（文章顶部）可见 */
+/* 移动端（< 72rem）：右侧边栏版本隐藏，TOC 内紧凑按钮可见 */
 @media (max-width: 71.999rem) {
   .export-json-widget--desktop {
     display: none;
   }
 
-  .export-json-widget--mobile {
-    margin-top: 0;
-    margin-bottom: 1.25rem;
-    padding: 0.75rem;
-    border: 1px solid var(--sl-color-hairline);
-    border-radius: 8px;
-    background: var(--sl-color-bg-sidebar, var(--sl-color-bg-nav));
+  /* 移动端 TOC summary 内紧凑按钮：靠右，自动宽度，小尺寸 */
+  .export-json-btn--toc {
+    margin-inline-start: auto;
+    flex-shrink: 0;
+    width: auto;
+    font-size: 0.72rem;
+    padding: 0.2em 0.55em;
+    line-height: 1.4;
   }
+}
 
-  .export-json-widget--mobile .export-json-btn {
-    font-size: 0.875rem;
-    padding: 0.5em 1em;
-  }
+/* 复制成功 Toast 提示（移动端） */
+.export-json-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background-color: var(--sl-color-bg-nav);
+  color: var(--sl-color-text);
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  max-width: calc(100vw - 2rem);
+  text-align: center;
+  box-shadow: var(--sl-shadow-md, 0 4px 12px rgba(0,0,0,0.15));
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
 
-  .export-json-widget--mobile .export-json-hint {
-    font-size: 0.75rem;
-  }
+.export-json-toast--visible {
+  opacity: 1;
 }

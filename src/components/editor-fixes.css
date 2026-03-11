@@ -36,6 +36,11 @@
     gap: 8px 12px;
 }
 
+/* 提交/下载按钮行：左右内边距与 Card body 保持一致（border 1px + padding 12px = 13px） */
+.submit-form-root .submit-action-row {
+    padding: 0 13px;
+}
+
 .submit-form-root .form-two-col-grid .ant-form-item {
     margin-bottom: 0;
 }

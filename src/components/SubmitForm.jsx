@@ -580,17 +580,17 @@ export default function SubmitForm() {
                             onSuccess={(token) => setTurnstileToken(token)}
                         />
                     </div>
-                    <div className="form-two-col-grid" style={{ marginBottom: 12 }}>
+                    <div className="form-two-col-grid submit-action-row" style={{ marginBottom: 12 }}>
                         <Button
                             htmlType="submit"
                             type="primary"
                             loading={isSubmitting}
                             disabled={!turnstileToken}
-                            block
+                            style={{ width: '100%', height: '32px' }}
                         >
                             提交投稿
                         </Button>
-                        <Button onClick={handleDownload} block>下载 Markdown</Button>
+                        <Button onClick={handleDownload} style={{ width: '100%', height: '32px' }}>下载 Markdown</Button>
                     </div>
                     {submitResult?.type === 'success' && (
                         <Alert
