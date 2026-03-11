@@ -349,12 +349,74 @@
     return wrapper;
   }
 
+  // ─── 创建移动端 TOC 内紧凑导出按钮 ───────────────────────────────
+  function createTocExportBtn() {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'export-json-btn export-json-btn--toc';
+    btn.textContent = '导出 JSON';
+
+    btn.addEventListener('click', function (e) {
+      // 阻止触发 <details> 展开/折叠
+      e.stopPropagation();
+      var data = parseArchivePageToJson();
+      if (!data) {
+        // eslint-disable-next-line no-alert
+        window.alert('无法解析页面内容，请确认当前页面是归档文档。');
+        return;
+      }
+      var json = JSON.stringify(data, null, 2);
+      copyText(
+        json,
+        function () {
+          btn.textContent = '✅ 已复制';
+          btn.classList.add('export-json-btn--copied');
+          showTocCopyToast();
+          setTimeout(function () {
+            btn.textContent = '导出 JSON';
+            btn.classList.remove('export-json-btn--copied');
+          }, 2000);
+        },
+        function () {
+          // eslint-disable-next-line no-alert
+          window.alert('复制失败，请检查浏览器权限。');
+        }
+      );
+    });
+
+    return btn;
+  }
+
+  // ─── 显示复制成功提示 ─────────────────────────────────────────
+  function showTocCopyToast() {
+    // 与 CSS .export-json-toast { transition: opacity 0.2s ease } 保持一致
+    var TOAST_FADE_DURATION = 300; // ms，略大于 CSS transition 时长以确保动画完成
+
+    var existing = document.querySelector('.export-json-toast');
+    if (existing) existing.remove();
+
+    var toast = document.createElement('div');
+    toast.className = 'export-json-toast';
+    toast.textContent = '已复制 JSON，可粘贴到「参与贡献」板块进行修改投稿';
+    document.body.appendChild(toast);
+
+    // 触发渐显动画
+    requestAnimationFrame(function () {
+      toast.classList.add('export-json-toast--visible');
+    });
+
+    setTimeout(function () {
+      toast.classList.remove('export-json-toast--visible');
+      setTimeout(function () { toast.remove(); }, TOAST_FADE_DURATION);
+    }, 2500);
+  }
+
   // ─── 注入按钮 ─────────────────────────────────────────────────
   function injectExportWidget() {
     if (!isArchivePage()) return;
 
-    // 幂等：已注入则跳过
-    if (document.querySelector('.export-json-widget')) return;
+    // 桌面端：幂等检查
+    if (document.querySelector('.export-json-widget--desktop')) return;
 
     // 桌面端：插入到 starlight-toc 之后（右侧边栏）
     var toc = document.querySelector('starlight-toc');
@@ -363,11 +425,13 @@
       toc.insertAdjacentElement('afterend', desktopWidget);
     }
 
-    // 移动端：插入到文章内容顶部（右边栏隐藏时可见）
-    var article = document.querySelector('.sl-markdown-content');
-    if (article) {
-      var mobileWidget = createExportWidget('export-json-widget--mobile');
-      article.insertAdjacentElement('afterbegin', mobileWidget);
+    // 移动端：插入到 mobile TOC summary 右端
+    if (!document.querySelector('.export-json-btn--toc')) {
+      var mobileSummary = document.querySelector('mobile-starlight-toc summary');
+      if (mobileSummary) {
+        var mobileBtn = createTocExportBtn();
+        mobileSummary.appendChild(mobileBtn);
+      }
     }
   }
 
