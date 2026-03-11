@@ -38,9 +38,9 @@ jobs:
       - name: 运行 Lychee Link Checker
         uses: lycheeverse/lychee-action@v2
         with:
-          # 扫描所有新提交的 Markdown 文件中的 URL
+          # 扫描归档子目录下的 Markdown 文件（排除顶层 index.md，该文件的内部链接无需死链排查）
           # 忽略以 / 开头的内部绝对路径链接（如 /docs/...）
-          args: --verbose --no-progress --exclude '^/' './src/content/docs/统计专业档案/*.md'
+          args: --verbose --no-progress --exclude '^/' './src/content/docs/统计专业档案/*/*.md'
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
