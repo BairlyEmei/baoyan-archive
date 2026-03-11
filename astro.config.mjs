@@ -13,12 +13,17 @@ export default defineConfig({
       customCss: [
         './src/styles/sidebar-fixes.css',
         './src/styles/copy-link-btn.css',
+        './src/styles/export-json-btn.css',
         './src/styles/homepage.css',
       ],
       head: [
         {
           tag: 'script',
           attrs: { src: '/copy-links.js', defer: true },
+        },
+        {
+          tag: 'script',
+          attrs: { src: '/export-json.js', defer: true },
         },
         {
           tag: 'script',
