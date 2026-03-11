@@ -584,16 +584,16 @@ export default function SubmitForm() {
                             onSuccess={(token) => setTurnstileToken(token)}
                         />
                     </div>
-                    {/* 父容器使用 flex，默认就是靠左对齐 (justify-content: flex-start) */}
+
                     <div style={{ display: 'flex', gap: '16px', marginBottom: 12 }}>
                         <Button
                         htmlType="submit"
                         type="primary"
                         loading={isSubmitting}
                         disabled={!turnstileToken}
-                        size="small"        {/* 保持小尺寸 */}
+                        size="small"
                         style={{
-                            height: '32px', {/* 锁定高度，保证垂直绝对对齐 */}
+                            height: '32px',
                             display: 'flex',
                             alignItems: 'center'
                         }}
