@@ -14,22 +14,13 @@
       path = decodeURIComponent(path);
     } catch (_) {}
 
-    // 如果根本不在这个专业目录下，直接返回 false
-    if (!path.includes('/统计专业档案/')) {
-      return false;
-    }
-
-    // 格式化路径：去掉末尾可能存在的斜杠 "/" 或 "index.html"
-    var normalizedPath = path.replace(/\/index\.html$/, '').replace(/\/$/, '');
-
-    // 如果去掉末尾的斜杠后，路径恰好是以 "/统计专业档案" 结尾，
-    // 说明当前处于该专业的 index 主页，不需要显示按钮
-    if (normalizedPath.endsWith('/统计专业档案')) {
-      return false;
-    }
-
-    // 只有在具体的院校子页面（例如 /统计专业档案/北京大学/）才会返回 true
-    return true;
+    // 仅匹配具体的院校归档页，路径格式必须为：
+    //   /统计专业档案/{大学名称}/{学院名称}[/]
+    // 即在 /统计专业档案/ 后至少有两段非空路径（大学 + 学院），
+    // 从而自动排除：
+    //   - 统计专业档案 index（/统计专业档案/ 或 /统计专业档案）
+    //   - 大学级别的 index（/统计专业档案/北京大学/ 等，如将来添加）
+    return /\/统计专业档案\/[^/]+\/[^/]+/.test(path);
   }
 
   // ─── 工具函数：提取列表项中 <strong> 后的文本 ────────────────
@@ -371,8 +362,15 @@
     btn.className = 'export-json-btn export-json-btn--toc export-json-btn--mobile-corner';
     btn.textContent = '导出 JSON';
 
+    // 防止 pointerdown / touchstart 冒泡至 <summary>，避免触发 <details> 展开/折叠
+    ['pointerdown', 'mousedown', 'touchstart'].forEach(function (evtName) {
+      btn.addEventListener(evtName, function (e) {
+        e.stopPropagation();
+      });
+    });
+
     btn.addEventListener('click', function (e) {
-      e.stopPropagation(); // 防止事件冒泡
+      e.stopPropagation(); // 防止事件冒泡至 <summary>
       e.preventDefault();  // 防止默认行为
 
       var data = parseArchivePageToJson();
@@ -446,10 +444,15 @@
   function injectExportWidget() {
     if (!isArchivePage()) return;
 
+    // ── 安全检查：禁止将组件注入到文章正文（.sl-markdown-content）内部 ──
+    // 双重保障：即使选择器意外命中正文区域内的元素，也不会在文档标题下方插入按钮。
+
     // 桌面端：幂等检查与注入
     if (!document.querySelector('.export-json-widget--desktop')) {
       var toc = document.querySelector('starlight-toc');
-      if (toc) {
+      // 确保 starlight-toc 确实位于右侧边栏，而非文章内容区
+      var article = document.querySelector('.sl-markdown-content');
+      if (toc && !(article && article.contains(toc))) {
         var desktopWidget = createExportWidget('export-json-widget--desktop');
         toc.insertAdjacentElement('afterend', desktopWidget);
       }
