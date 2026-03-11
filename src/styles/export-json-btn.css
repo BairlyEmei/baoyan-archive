@@ -1,0 +1,87 @@
+/* 导出 JSON 按钮区块 — 与 Starlight 亮色/暗色主题自动适配 */
+
+.export-json-widget {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.export-json-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.5;
+  padding: 0.35em 0.85em;
+  border-radius: 6px;
+  border: 1px solid var(--sl-color-accent);
+  background-color: transparent;
+  color: var(--sl-color-accent);
+  font-family: inherit;
+  user-select: none;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+  width: 100%;
+}
+
+.export-json-btn:hover {
+  background-color: var(--sl-color-accent-low);
+  color: var(--sl-color-accent-high, var(--sl-color-accent));
+  border-color: var(--sl-color-accent);
+}
+
+.export-json-btn:active {
+  transform: scale(0.97);
+}
+
+.export-json-btn--copied {
+  background-color: var(--sl-color-accent-low);
+  color: var(--sl-color-accent-high, var(--sl-color-accent));
+  border-color: var(--sl-color-accent);
+}
+
+.export-json-hint {
+  font-size: 0.7rem;
+  color: var(--sl-color-gray-3);
+  line-height: 1.4;
+  display: block;
+}
+
+/* 桌面端（>= 72rem）：右侧边栏版本可见，移动端版本隐藏 */
+@media (min-width: 72rem) {
+  .export-json-widget--mobile {
+    display: none;
+  }
+}
+
+/* 移动端（< 72rem）：右侧边栏隐藏，移动端版本（文章顶部）可见 */
+@media (max-width: 71.999rem) {
+  .export-json-widget--desktop {
+    display: none;
+  }
+
+  .export-json-widget--mobile {
+    margin-top: 0;
+    margin-bottom: 1.25rem;
+    padding: 0.75rem;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 8px;
+    background: var(--sl-color-bg-sidebar, var(--sl-color-bg-nav));
+  }
+
+  .export-json-widget--mobile .export-json-btn {
+    font-size: 0.875rem;
+    padding: 0.5em 1em;
+  }
+
+  .export-json-widget--mobile .export-json-hint {
+    font-size: 0.75rem;
+  }
+}
