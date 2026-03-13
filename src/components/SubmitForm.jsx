@@ -553,7 +553,7 @@ export default function SubmitForm() {
                             <label htmlFor="author-name" style={{ display: 'block', marginBottom: 4 }}>署名（可匿名）</label>
                             <Input
                             id="author-name"
-                            placeholder="你的昵称或真实姓名，留空则显示为匿名"
+                            placeholder="你的昵称，留空则显示为匿名"
                             value={authorName}
                             onChange={(e) => setAuthorName(e.target.value)}
                             />
