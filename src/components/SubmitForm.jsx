@@ -121,6 +121,7 @@ export default function SubmitForm() {
     const [authorName, setAuthorName] = useState('');
     const [authorEmail, setAuthorEmail] = useState('');
     const [turnstileToken, setTurnstileToken] = useState('');
+    const [turnstileMsg, setTurnstileMsg] = useState(null); // { type: 'error'|'warning', text: string }
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitResult, setSubmitResult] = useState(null); // { type: 'success'|'error'|'fallback', message, prUrl? }
     const [draftSavedAt, setDraftSavedAt] = useState(null);
@@ -578,12 +579,32 @@ export default function SubmitForm() {
                         </Radio.Group>
                     </Card>
 
-                    <div style={{ marginBottom: 12 }}>
+                    <div style={{ marginBottom: 4 }}>
                         <Turnstile
                             siteKey={import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || "你的真实SITE_KEY"}
-                            onSuccess={(token) => setTurnstileToken(token)}
+                            onSuccess={(token) => { setTurnstileToken(token); setTurnstileMsg(null); }}
+                            onError={() => {
+                                setTurnstileToken('');
+                                setTurnstileMsg({ type: 'error', text: '验证码加载失败，请刷新页面或切换网络重试。若启用了广告拦截插件，请暂时关闭后再试。' });
+                            }}
+                            onExpire={() => {
+                                setTurnstileToken('');
+                                setTurnstileMsg({ type: 'warning', text: '验证码已过期，请重新完成验证后再提交。' });
+                            }}
                         />
                     </div>
+                    {/* 验证状态提示：仅在未完成验证或出错时显示 */}
+                    {turnstileMsg ? (
+                        <Alert type={turnstileMsg.type} showIcon message={turnstileMsg.text} style={{ marginBottom: 8 }} />
+                    ) : !turnstileToken ? (
+                        <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+                            请先完成上方人机验证后再提交
+                        </Typography.Text>
+                    ) : (
+                        <Typography.Text type="success" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+                            ✓ 人机验证已完成
+                        </Typography.Text>
+                    )}
 
                     <div style={{ display: 'flex', gap: '16px', marginBottom: 12 }}>
                         <Button

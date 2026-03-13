@@ -21,6 +21,44 @@ function isOriginAllowed(origin) {
 }
 
 // ============================================================
+// IP 请求频率限制：防止同一 IP 短时间内大量刷接口
+// Serverless 实例热复用期间有效；冷启动后窗口自动重置
+// ============================================================
+const IP_RATE_LIMIT_MAX = 5;                          // 每个窗口期最多允许的请求数
+const IP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;      // 窗口期长度：10 分钟
+
+/** @type {Map<string, { count: number, windowStart: number }>} */
+const ipRequestMap = new Map();
+
+/**
+ * 检查 IP 是否触发限流
+ * 注：Node.js 单线程事件循环保证此函数内无竞态；
+ * Serverless 冷启动会重置计数器，此为轻量级防护，
+ * 生产级需求可替换为 Redis / Vercel KV 持久化存储。
+ * @param {string} ip
+ * @returns {{ limited: boolean, retryMinutes?: number }}
+ */
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const entry = ipRequestMap.get(ip);
+
+  if (!entry || now - entry.windowStart > IP_RATE_LIMIT_WINDOW_MS) {
+    // 新窗口或首次访问：初始化计数
+    ipRequestMap.set(ip, { count: 1, windowStart: now });
+    return { limited: false };
+  }
+
+  if (entry.count >= IP_RATE_LIMIT_MAX) {
+    const retryAfterMs = IP_RATE_LIMIT_WINDOW_MS - (now - entry.windowStart);
+    const retryMinutes = Math.ceil(retryAfterMs / 60000);
+    return { limited: true, retryMinutes };
+  }
+
+  entry.count += 1;
+  return { limited: false };
+}
+
+// ============================================================
 // 超时保护工厂：Serverless 函数最多跑 8s，超时抛 TIMEOUT 错误
 // 防止 GitHub API 慢响应拖死函数，确保前端能收到 504 并触发容灾
 // ============================================================
@@ -71,7 +109,27 @@ export default async function handler(req, res) {
   }
 
   // ----------------------------------------------------------
-  // 2. 请求体解析与字段空值校验
+  // 2-a. IP 频率限制：超限直接 429，返回可读中文提示
+  // ----------------------------------------------------------
+  // x-real-ip 由 Vercel 基础设施注入，不可被客户端伪造；
+  // x-forwarded-for 作为后备（可能含多跳，取第一段）
+  const clientIp =
+    req.headers['x-real-ip'] ||
+    (req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
+    req.socket?.remoteAddress ||
+    'unknown';
+
+  const rateCheck = checkRateLimit(clientIp);
+  if (rateCheck.limited) {
+    console.warn(`[RateLimit] IP ${clientIp} 请求过于频繁`);
+    return res.status(429).json({
+      error: `IP 请求过于频繁，请 ${rateCheck.retryMinutes} 分钟后重试`,
+    });
+  }
+
+
+  // ----------------------------------------------------------
+  // 2-b. 请求体解析与字段空值校验
   // ----------------------------------------------------------
   const { markdownContent, universityName, turnstileToken, authorName, authorEmail, collegeName, submissionType } = req.body;
 
