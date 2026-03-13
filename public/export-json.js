@@ -411,7 +411,7 @@
 
     var toast = document.createElement('div');
     toast.className = 'export-json-toast';
-    toast.textContent = '✅ 复制成功！可粘贴到「参与贡献」板块';
+    toast.textContent = '✅ 复制成功！可粘贴到「参与贡献」板块进行修改投稿';
     // 直接用内联样式覆盖，确保在移动端底部居中显示
     toast.style.position = 'fixed';
     toast.style.bottom = '15%';
