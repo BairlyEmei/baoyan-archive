@@ -7,6 +7,8 @@ description: 各高校统计学及相关专业保研档案汇总
 
 请从左侧边栏或右上角选择您感兴趣的高校档案进行查阅。如需贡献新的档案，请参阅[贡献指南](../contribute)。
 
+> ⚠️ **注意**：使用、贡献前请仔细阅读 [免责声明 (Disclaimer)](https://github.com/BairlyEmei/baoyan-archive/blob/main/DISCLAIMER.md)。
+
 ## 2026年保研关键时间轴
 
 根据教育部及多所高校发布的政策文件（[参考文件](https://yz.chsi.com.cn/yzzt/tmzn/#bmlc))，2026年保研参考关键节点如下表所示，建议考生提前设置提醒，避免错过重要截止日期：
