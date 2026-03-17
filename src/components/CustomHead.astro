@@ -3,6 +3,7 @@
 import type { Props } from '@astrojs/starlight/props';
 import StarlightHead from '@astrojs/starlight/components/Head.astro';
 import Analytics from '@vercel/analytics/astro';
+import SpeedInsights from '@vercel/speed-insights/astro';
 ---
 
 <!-- Include the default Starlight head content -->
@@ -10,3 +11,6 @@ import Analytics from '@vercel/analytics/astro';
 
 <!-- Add Vercel Web Analytics -->
 <Analytics />
+
+<!-- Add Vercel Speed Insights -->
+<SpeedInsights />
