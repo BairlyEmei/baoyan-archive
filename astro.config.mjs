@@ -27,6 +27,10 @@ export default defineConfig({
         },
         {
           tag: 'script',
+          attrs: { src: '/scroll-restore.js', defer: true },
+        },
+        {
+          tag: 'script',
           content: `
 (function() {
   var PLACEHOLDER = '搜索高校名称、专业或关键词...';
