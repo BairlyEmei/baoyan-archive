@@ -1,0 +1,12 @@
+---
+// Import the default Starlight Head component
+import type { Props } from '@astrojs/starlight/props';
+import StarlightHead from '@astrojs/starlight/components/Head.astro';
+import Analytics from '@vercel/analytics/astro';
+---
+
+<!-- Include the default Starlight head content -->
+<StarlightHead {...Astro.props}><slot /></StarlightHead>
+
+<!-- Add Vercel Web Analytics -->
+<Analytics />
