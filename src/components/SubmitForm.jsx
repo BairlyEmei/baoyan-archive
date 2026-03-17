@@ -507,7 +507,7 @@ export default function SubmitForm() {
                                                     <Input placeholder="如有无英文面试" />
                                                 </Form.Item>
                                                 <Form.Item className="grid-span-2" label="综合经验贴（每行一个）" name={[field.name, 'experienceLinks']}>
-                                                    <Input.TextArea rows={2} placeholder="多方向综合贴统一放第一个方向下，注意不要含不被包裹的|符号" />
+                                                    <Input.TextArea rows={2} placeholder="多方向综合贴统一放第一个方向下，请确保你复制的单个链接在一行内" />
                                                 </Form.Item>
                                                 <Form.Item className="grid-span-2" label="优营/预推免名单贴（每行一个）" name={[field.name, 'admissionListLinks']}>
                                                     <Input.TextArea rows={2} />

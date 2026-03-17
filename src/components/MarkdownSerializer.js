@@ -1,32 +1,11 @@
 /**
- * Split text by pipe (|) or newline, but do not split inside 【...】 brackets.
- * This avoids breaking Xiaohongshu (小红书) PC share text that contains
- * "【title | 小红书 - ...】" into two fragments.
+ * Split text by newline only.  Each line is treated as one link entry.
+ * Pipe characters (|) are intentionally NOT used as separators so that
+ * users can freely paste share text that contains | without it being
+ * broken into two spurious entries.
  */
 function smartSplitLinks(text) {
-    const results = [];
-    let current = '';
-    let depth = 0;
-
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        if (char === '【') {
-            depth++;
-            current += char;
-        } else if (char === '】') {
-            depth = Math.max(0, depth - 1);
-            current += char;
-        } else if ((char === '|' || char === '\n') && depth === 0) {
-            const trimmed = current.trim();
-            if (trimmed) results.push(trimmed);
-            current = '';
-        } else {
-            current += char;
-        }
-    }
-    const trimmed = current.trim();
-    if (trimmed) results.push(trimmed);
-    return results;
+    return text.split('\n').map((s) => s.trim()).filter(Boolean);
 }
 
 function normalizeLinks(rawText) {
@@ -34,7 +13,10 @@ function normalizeLinks(rawText) {
         return [];
     }
 
-    return smartSplitLinks(String(rawText));
+    // Only keep items that actually contain a URL.  This discards trailing
+    // boilerplate lines from mobile Xiaohongshu share text such as
+    // "复制后打开【小红书】查看笔记！" that do not hold a real link.
+    return smartSplitLinks(String(rawText)).filter((item) => /https?:\/\//.test(item));
 }
 
 /**
