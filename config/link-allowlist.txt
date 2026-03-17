@@ -1,0 +1,25 @@
+# ==========================================
+# baoyan-archive 外部链接白名单
+# 支持精确匹配 (如 github.com) 和通配符匹配 (如 *.edu.cn)
+# ==========================================
+
+# --- 教育与科研机构 (核心) ---
+*.edu.cn
+*.ac.cn
+*.gov.cn
+*.edu
+
+# --- 常用开源与代码托管平台 ---
+github.com
+*.github.io
+raw.githubusercontent.com
+gitee.com
+gitlab.com
+
+# --- 常用社交/分享/知识平台 (根据实际需要开启，这里默认放开常见来源) ---
+mp.weixin.qq.com
+*.xiaohongshu.com
+xhslink.com
+zh.wikipedia.org
+zhuanlan.zhihu.com
+www.zhihu.com
