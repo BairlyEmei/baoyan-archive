@@ -9,6 +9,7 @@ export default defineConfig({
       title: '保研信息开源档案库',
       components: {
         Footer: './src/components/CustomFooter.astro',
+        Head: './src/components/CustomHead.astro',
       },
       customCss: [
         './src/styles/sidebar-fixes.css',
