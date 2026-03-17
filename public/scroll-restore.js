@@ -10,7 +10,8 @@
  *   - On Astro View Transition navigation (astro:page-load): do NOT restore
  *     because the user intentionally navigated to a new page and should see
  *     the top.  We only restore on a genuine fresh load, detected by the
- *     absence of the `astro:navigated` session-flag set below.
+ *     absence of the `astro:navigated` sessionStorage flag at the time the
+ *     handler runs.
  *   - On scroll: debounce-save the current position to localStorage.
  *   - On pagehide: eagerly save the current position.
  */
@@ -18,6 +19,7 @@
   var PREFIX = 'scrollpos:';
   var SAVE_DELAY = 250;
   var saveTimer = null;
+  var scrollListenerAttached = false;
 
   function key() {
     return PREFIX + location.pathname;
@@ -44,35 +46,48 @@
   }
 
   function attachScrollListener() {
+    if (scrollListenerAttached) return;
     window.addEventListener('scroll', scheduleSave, { passive: true });
+    scrollListenerAttached = true;
+  }
+
+  function isFreshLoad() {
+    // sessionStorage is cleared when the tab/session ends, so its absence
+    // reliably identifies a fresh (non-client-side-navigation) page load.
+    try {
+      return !sessionStorage.getItem('astro:navigated');
+    } catch (_) {
+      return true;
+    }
+  }
+
+  function markNavigated() {
+    try {
+      sessionStorage.setItem('astro:navigated', '1');
+    } catch (_) {}
   }
 
   // --- Initial (hard) page load ---
-  // sessionStorage flag is absent on a fresh browser load but present after
-  // any Astro client-side navigation within the same session.
-  var freshLoad = !sessionStorage.getItem('astro:navigated');
-
   document.addEventListener('DOMContentLoaded', function () {
-    if (freshLoad) {
+    if (isFreshLoad()) {
       restore();
     }
     attachScrollListener();
   });
 
   // --- Astro View Transitions ---
-  // astro:page-load fires after every client-side navigation.
-  // We re-attach the scroll listener for the new page and set the
-  // session flag so the *next* astro:page-load knows not to restore.
+  // astro:page-load fires after every client-side navigation AND after the
+  // initial page load.  We use it to:
+  //   1. Re-attach the scroll listener after each navigation.
+  //   2. Mark the session so subsequent page-loads are NOT treated as fresh.
   document.addEventListener('astro:page-load', function () {
-    // On a fresh load DOMContentLoaded already ran; skip re-attachment to
-    // avoid duplicate listeners.
-    if (!freshLoad) {
-      attachScrollListener();
-    }
-    freshLoad = false;
-    try {
-      sessionStorage.setItem('astro:navigated', '1');
-    } catch (_) {}
+    // On the very first (non-client-nav) page-load DOMContentLoaded already
+    // attached the listener; attachScrollListener is idempotent so it's safe
+    // to call again here.
+    attachScrollListener();
+    // Mark that any future astro:page-load within this tab is a navigation,
+    // not a fresh load.
+    markNavigated();
   });
 
   // Save eagerly when the user leaves the page.
