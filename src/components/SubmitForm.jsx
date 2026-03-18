@@ -598,7 +598,7 @@ export default function SubmitForm() {
                         <Alert type={turnstileMsg.type} showIcon message={turnstileMsg.text} style={{ marginBottom: 8 }} />
                     ) : !turnstileToken ? (
                         <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
-                            请先完成上方人机验证后再提交
+                            等待人机验证完成
                         </Typography.Text>
                     ) : (
                         <Typography.Text type="success" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
