@@ -27,62 +27,12 @@ jobs:
           python-version: '3.x'
 
       - name: Check new URLs against allowlist
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 提取 PR 中新增的内容行
-          gh pr diff ${{ github.event.pull_request.number }} | grep "^+[^+]" > diff_adds.txt || true
-
-          python -c '
-          import re, sys, fnmatch, ipaddress
-          from urllib.parse import urlparse
-
-          # 读取新增行
-          with open("diff_adds.txt", "r", encoding="utf-8") as f:
-              added_lines = f.readlines()
-
-          # 读取白名单
-          try:
-              with open("config/link-allowlist.txt", "r", encoding="utf-8") as f:
-                  allowlist = [line.strip() for line in f if line.strip() and not line.startswith("#")]
-          except FileNotFoundError:
-              print("⚠️ 未找到 config/link-allowlist.txt，跳过检查。")
-              sys.exit(0)
-
-          url_pattern = re.compile(r"https?://[^\s<>\"'\)]+")
-          bad_urls = []
-
-          for line in added_lines:
-              urls = url_pattern.findall(line)
-              for url in urls:
-                  domain = urlparse(url).netloc.split(":")[0]
-
-                  # 拦截裸 IP 和常见短链
-                  is_ip = False
-                  try:
-                      ipaddress.ip_address(domain)
-                      is_ip = True
-                  except ValueError:
-                      pass
-                  if is_ip or domain in ["t.co", "bit.ly", "suo.im", "is.gd", "tinyurl.com"]:
-                      bad_urls.append((url, "禁止使用裸 IP 或短网址"))
-                      continue
-
-                  # 白名单匹配
-                  allowed = any(fnmatch.fnmatch(domain, pattern) or domain == pattern for pattern in allowlist)
-                  if not allowed:
-                      bad_urls.append((url, f"域名 {domain} 不在白名单中"))
-
-          if bad_urls:
-              print("❌ 发现违规链接！PR 包含不在白名单或被禁止的域名：\n")
-              for url, reason in bad_urls:
-                  print(f"  - {url} ({reason})")
-              print("\n💡 修复建议：")
-              print("请确保链接是官方来源。如果该域名是合法的学校/机构官网，请在本次 PR 中修改 `config/link-allowlist.txt` 申请加白。")
-              sys.exit(1)
-          else:
-              print("✅ 新增链接域名安全检查通过！")
-          '
+          set -euo pipefail
+          # 使用 git diff 获取 PR 新增内容（无需 gh CLI 或额外 token）
+          BASE_SHA=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
+          git diff "${BASE_SHA}" HEAD -- 'src/content/docs/统计专业档案/**.md' \
+            | python scripts/check_new_urls.py
 
   # 任务 2：Markdown 格式规范检查
   markdown-lint:
