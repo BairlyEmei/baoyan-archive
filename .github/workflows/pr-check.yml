@@ -65,12 +65,15 @@ jobs:
       - name: 运行 Lychee Link Checker
         uses: lycheeverse/lychee-action@v2
         with:
-          # 忽略由于反爬虫 (如知乎) 和防火墙 (如人大) 导致的失败，放宽超时时间，接受403
+          # 忽略由于反爬虫 (如知乎) 和防火墙 (如人大) 导致的失败，放宽超时时间，接受200/403/429
+          # 仅检查 http/https 链接，跳过相对路径文件链接（如内部导航链接）
           args: >-
+            --scheme https
+            --scheme http
             --exclude "zhihu\.com"
             --exclude "ruc\.edu\.cn"
             --timeout 15
-            --accept 403,429
+            --accept 200,403,429
             "src/content/docs/统计专业档案/**/*.md"
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
