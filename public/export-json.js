@@ -44,12 +44,13 @@
     return parts.join('').trim();
   }
 
-  /** 从列表项中提取所有直接子 <a> 的 href（过滤非 http URL）*/
+  /** 从列表项中提取所有直接子 <a>，返回 Markdown 链接字符串数组（保留链接标题）*/
   function getLinksFromLi(li) {
     var links = [];
     li.querySelectorAll(':scope > a').forEach(function (a) {
       if (/^https?:\/\//.test(a.href)) {
-        links.push(a.href);
+        var label = a.textContent.trim();
+        links.push(label ? '[' + label + '](' + a.href + ')' : a.href);
       }
     });
     return links;
@@ -90,7 +91,8 @@
           var t = node.textContent.replace(/^\s*\*?\s*|\s*\n\s*\*?\s*$/g, '').trim();
           if (t) textParts.push(t);
         } else if (node.nodeName === 'A' && /^https?:\/\//.test(node.href)) {
-          links.push(node.href);
+          var label = node.textContent.trim();
+          links.push(label ? '[' + label + '](' + node.href + ')' : node.href);
         }
         node = node.nextSibling;
       }
