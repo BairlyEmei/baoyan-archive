@@ -124,6 +124,19 @@ npm run dev
 
 ---
 
+## 🛠️ 项目维护
+
+维护者在合并 PR 或拉取最新代码后，可通过以下 CLI 指令快速完成日常维护任务：
+
+| 指令 | 说明 |
+|------|------|
+| `npm run cli -- replace <src> <dest>` | 替换档案文件（自动创建目标目录） |
+| `npm run cli -- diff <file1> <file2>` | 比对两个档案文件的差异 |
+| `npm run cli -- check [dir]` | 检查死链（默认扫描档案目录） |
+| `npm run cli -- index [dir] [--out file]` | 生成档案目录索引（默认输出到 stdout） |
+
+---
+
 ## 📜 许可证
 
 本项目采用 [MIT License](https://www.google.com/search?q=./LICENSE) 开源。数据内容由社区贡献者共同维护，转载请注明来源。
