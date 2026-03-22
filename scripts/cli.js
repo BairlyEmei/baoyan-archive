@@ -24,6 +24,17 @@ const c = {
   bold:   s => `\x1b[1m${s}\x1b[0m`,
 };
 
+/** Domains blocked regardless of allowlist (URL shorteners). */
+const BLOCKED_SHORTENERS = new Set(['t.co', 'bit.ly', 'suo.im', 'is.gd', 'tinyurl.com']);
+
+/** Escape a string for safe use inside a RegExp. */
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Commands that modify files and therefore support the --commit cascade flag. */
+const COMMIT_CAPABLE_CMDS = new Set(['replace', 'sync-readme', 'migrate-meta']);
+
 // ─── shared helpers ───────────────────────────────────────────────────────────
 
 function walkMd(dir) {
@@ -133,7 +144,7 @@ function cmdReplace(args) {
 
 // ─── auto-commit ──────────────────────────────────────────────────────────────
 
-async function cmdAutoCommit({ auto = false } = {}) {
+async function cmdAutoCommit({ auto = false, message = 'chore: 自动化维护' } = {}) {
   try {
     execSync('git rev-parse --is-inside-work-tree', { stdio: 'ignore', cwd: ROOT });
   } catch {
@@ -158,7 +169,7 @@ async function cmdAutoCommit({ auto = false } = {}) {
 
   if (confirmed) {
     execSync('git add .', { stdio: 'inherit', cwd: ROOT });
-    execSync('git commit -m "chore: 自动化维护"', { stdio: 'inherit', cwd: ROOT });
+    execSync(`git commit -m ${JSON.stringify(message)}`, { stdio: 'inherit', cwd: ROOT });
     console.log(c.green('✓ 提交成功。'));
   } else {
     console.log('已取消。');
@@ -220,7 +231,6 @@ function cmdUrlPolicy(dir) {
     return;
   }
 
-  const BLOCKED_SHORTENERS = new Set(['t.co', 'bit.ly', 'suo.im', 'is.gd', 'tinyurl.com']);
   const IP_RE = /^\d{1,3}(\.\d{1,3}){3}$/;
   const URL_RE = /https?:\/\/[^\s<>"')]+/g;
 
@@ -379,7 +389,7 @@ function cmdSyncReadme() {
     const colleges = [];
     for (const file of fs.readdirSync(schoolDir, { withFileTypes: true })) {
       if (!/\.mdx?$/.test(file.name)) continue;
-      // Skip supplement files and index files in college name extraction
+      // Skip supplement files (_补充_*.md)
       if (SUPPLEMENT_RE.test(file.name)) continue;
       const content = fs.readFileSync(path.join(schoolDir, file.name), 'utf-8');
       const title = parseFrontmatterTitle(content);
@@ -421,7 +431,7 @@ function cmdSyncReadme() {
 // ─── migrate-meta (batch frontmatter update) ─────────────────────────────────
 
 function parseFrontmatter(content) {
-  const m = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+  const m = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n)?([\s\S]*)$/);
   if (!m) return null;
   return { yaml: m[1], body: m[2] };
 }
@@ -447,6 +457,7 @@ function cmdMigrateMeta(args) {
     if (colonIdx === -1) { console.error(c.red('✗ 格式错误，应为 "key: value"')); process.exit(1); }
     const key   = spec.slice(0, colonIdx).trim();
     const value = spec.slice(colonIdx + 1).trim();
+    const keyRe = new RegExp(`^${escapeRegex(key)}\\s*:`, 'm');
 
     for (const file of mdFiles) {
       const content = fs.readFileSync(file, 'utf-8');
@@ -455,7 +466,7 @@ function cmdMigrateMeta(args) {
         console.warn(c.yellow(`  ⚠  无 frontmatter，跳过: ${path.relative(ROOT, file)}`));
         continue;
       }
-      if (new RegExp(`^${key}\\s*:`, 'm').test(parsed.yaml)) {
+      if (keyRe.test(parsed.yaml)) {
         console.log(c.yellow(`  跳过（字段已存在）: ${path.relative(ROOT, file)}`));
         continue;
       }
@@ -471,15 +482,16 @@ function cmdMigrateMeta(args) {
     if (!spec) { console.error(c.red('✗ --rename 需要参数，如 --rename "old: new"')); process.exit(1); }
     const colonIdx = spec.indexOf(':');
     if (colonIdx === -1) { console.error(c.red('✗ 格式错误，应为 "oldKey: newKey"')); process.exit(1); }
-    const oldKey = spec.slice(0, colonIdx).trim();
-    const newKey = spec.slice(colonIdx + 1).trim();
+    const oldKey    = spec.slice(0, colonIdx).trim();
+    const newKey    = spec.slice(colonIdx + 1).trim();
+    const oldKeyRe  = new RegExp(`^${escapeRegex(oldKey)}(\\s*:)`, 'm');
 
     for (const file of mdFiles) {
       const content = fs.readFileSync(file, 'utf-8');
       const parsed  = parseFrontmatter(content);
       if (!parsed) continue;
-      if (!new RegExp(`^${oldKey}\\s*:`, 'm').test(parsed.yaml)) continue;
-      const newYaml    = parsed.yaml.replace(new RegExp(`^${oldKey}(\\s*:)`, 'm'), `${newKey}$1`);
+      if (!oldKeyRe.test(parsed.yaml)) continue;
+      const newYaml    = parsed.yaml.replace(oldKeyRe, `${newKey}$1`);
       const newContent = `---\n${newYaml}\n---\n${parsed.body}`;
       fs.writeFileSync(file, newContent, 'utf-8');
       console.log(c.green(`  ✓ 重命名 ${oldKey} → ${newKey}  →  ${path.relative(ROOT, file)}`));
@@ -637,10 +649,10 @@ ${c.bold('── 数据维护 ──')}
   ${c.bold('migrate-meta')} --rename "old: new" 批量重命名 frontmatter 字段
 
 ${c.bold('── Git 操作 ──')}
-  ${c.bold('auto-commit')}                      检测工作区变更并交互式提交
+  ${c.bold('auto-commit')} [--msg "消息"]          检测工作区变更并交互式提交
 
 ${c.bold('── 级联选项 ──')}
-  以上大多数指令支持追加 ${c.bold('--commit')} 选项，执行完毕后自动提交变更。
+  replace / sync-readme / migrate-meta 支持追加 ${c.bold('--commit')} 选项，执行完毕后自动提交变更。
   示例: npm run cli -- replace --all --commit
 `;
 
@@ -689,19 +701,21 @@ const commitFlag = args.includes('--commit');
     case 'migrate-meta':
       cmdMigrateMeta(args.filter(a => a !== '--commit'));
       break;
-    case 'auto-commit':
-      await cmdAutoCommit();
+    case 'auto-commit': {
+      const msgIdx = args.indexOf('--msg');
+      const message = msgIdx !== -1 ? args[msgIdx + 1] : undefined;
+      await cmdAutoCommit({ message });
       return; // skip the --commit cascade below
+    }
     default:
       process.stdout.write(HELP);
       if (cmd) { console.error(c.red(`\n✗ 未知指令: ${cmd}`)); process.exit(1); }
       return;
   }
 
-  // Cascade --commit: after any command that may modify files
-  if (commitFlag && cmd !== 'diff' && cmd !== 'check' && cmd !== 'ci' &&
-      cmd !== 'lint' && cmd !== 'url-policy' && cmd !== 'index') {
+  // Cascade --commit: only for write commands defined in COMMIT_CAPABLE_CMDS
+  if (commitFlag && COMMIT_CAPABLE_CMDS.has(cmd)) {
     console.log('');
-    await cmdAutoCommit({ auto: true });
+    await cmdAutoCommit({ auto: true, message: `chore(${cmd}): 自动化维护` });
   }
 })();

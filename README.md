@@ -170,6 +170,7 @@ npm run dev
 | 指令 | 说明 |
 |------|------|
 | `auto-commit` | 检测工作区变更，交互式确认后执行 `git add . && git commit` |
+| `auto-commit --msg "消息"` | 同上，并使用自定义提交消息 |
 
 > 💡 **级联提交**：`replace`、`sync-readme`、`migrate-meta` 等写入类指令均支持追加 `--commit` 选项，执行完毕后自动提交变更，无需再手动运行 `auto-commit`。例：`npm run cli -- replace --all --commit`
 
