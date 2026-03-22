@@ -25,7 +25,7 @@ export const submissionSchema = {
                         deadline: { type: 'string' },
                         notices: {
                             type: 'array',
-                            items: { type: 'string', pattern: '^https?://' },
+                            items: { type: 'string', pattern: '^(https?://|\\[[^\\]]*\\]\\(https?://)' },
                         },
                     },
                     additionalProperties: false,
@@ -36,7 +36,7 @@ export const submissionSchema = {
                         publish: { type: 'string' },
                         notices: {
                             type: 'array',
-                            items: { type: 'string', pattern: '^https?://' },
+                            items: { type: 'string', pattern: '^(https?://|\\[[^\\]]*\\]\\(https?://)' },
                         },
                     },
                     additionalProperties: false,
@@ -69,19 +69,19 @@ export const submissionSchema = {
                     interviewPreference: { type: 'string' },
                     experienceLinks: {
                         type: 'array',
-                        items: { type: 'string', pattern: '^https?://' },
+                        items: { type: 'string', pattern: '^(https?://|\\[[^\\]]*\\]\\(https?://)' },
                     },
                     admissionListLinks: {
                         type: 'array',
-                        items: { type: 'string', pattern: '^https?://' },
+                        items: { type: 'string', pattern: '^(https?://|\\[[^\\]]*\\]\\(https?://)' },
                     },
                     interviewLinks: {
                         type: 'array',
-                        items: { type: 'string', pattern: '^https?://' },
+                        items: { type: 'string', pattern: '^(https?://|\\[[^\\]]*\\]\\(https?://)' },
                     },
                     examLinks: {
                         type: 'array',
-                        items: { type: 'string', pattern: '^https?://' },
+                        items: { type: 'string', pattern: '^(https?://|\\[[^\\]]*\\]\\(https?://)' },
                     },
                 },
                 additionalProperties: false,
@@ -92,7 +92,7 @@ export const submissionSchema = {
             properties: {
                 notesLinks: {
                     type: 'array',
-                    items: { type: 'string', pattern: '^https?://' },
+                    items: { type: 'string', pattern: '^(https?://|\\[[^\\]]*\\]\\(https?://)' },
                 },
             },
             additionalProperties: false,
