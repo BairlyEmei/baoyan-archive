@@ -32,6 +32,15 @@ function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** * 获取用户实际执行命令时的真实所在目录
+ * 解析相对于该目录的绝对路径，解决 npm run 在根目录执行造成的路径偏移问题
+ */
+function resolveUserPath(p) {
+  if (!p) return p;
+  const runDir = process.env.INIT_CWD || process.cwd();
+  return path.resolve(runDir, p);
+}
+
 /** Commands that modify files and therefore support the --commit cascade flag. */
 const COMMIT_CAPABLE_CMDS = new Set(['replace', 'sync-readme', 'migrate-meta']);
 
@@ -89,7 +98,35 @@ function applyOnePair(pair) {
     console.warn(c.yellow(`⚠  原文件不存在，跳过（防止误操作）: ${relOrig}`));
     return false;
   }
-  fs.copyFileSync(supplementAbs, originalAbs);
+
+  let content = fs.readFileSync(supplementAbs, 'utf-8');
+
+  // 1. 完整匹配整个 frontmatter 区域（包含头尾的 ---）
+  const fmMatch = content.match(/^---\r?\n[\s\S]*?\r?\n---/);
+  // 2. 匹配第一个正文标题
+  const matchHeader = content.match(/^##\s+1\./m);
+
+  if (fmMatch && matchHeader) {
+    // 找到完整 frontmatter 结束的确切位置
+    const startIndex = fmMatch.index + fmMatch[0].length;
+    const endIndex = matchHeader.index;
+
+    // 确保标题确实在 frontmatter 之后
+    if (endIndex > startIndex) {
+      // 提取 frontmatter 和标题之间的过渡区域
+      const middleContent = content.substring(startIndex, endIndex);
+
+      // 如果过渡区域包含警告文字，就将其清空
+      if (middleContent.includes('[补充档案]')) {
+        const head = content.substring(0, startIndex);
+        const tail = content.substring(endIndex);
+        // 拼接：完整的头 + 两个换行符 + 完整的正文
+        content = head + '\n\n' + tail;
+      }
+    }
+  }
+
+  fs.writeFileSync(originalAbs, content, 'utf-8');
   fs.unlinkSync(supplementAbs);
   console.log(c.green(`✓  已覆盖原文件: ${relOrig}`));
   console.log(c.cyan(`   补充文件已删除: ${relSupp}`));
@@ -109,7 +146,7 @@ function cmdReplace(args) {
   }
 
   if (filePath) {
-    const abs = path.resolve(filePath);
+    const abs = resolveUserPath(filePath);
     if (!fs.existsSync(abs)) {
       console.error(c.red(`✗ 文件不存在: ${filePath}`));
       process.exit(1);
@@ -179,7 +216,7 @@ async function cmdAutoCommit({ auto = false, message = 'chore: 自动化维护' 
 // ─── lint (markdown format check) ────────────────────────────────────────────
 
 function cmdLint(dir) {
-  const targetDir = dir ? path.resolve(dir) : ARCHIVE_DIR;
+  const targetDir = dir ? resolveUserPath(dir) : ARCHIVE_DIR;
   if (!fs.existsSync(targetDir)) {
     console.error(c.red(`✗ 目录不存在: ${targetDir}`)); process.exit(1);
   }
@@ -206,9 +243,9 @@ function loadAllowlist() {
   const p = path.join(ROOT, 'config', 'link-allowlist.txt');
   if (!fs.existsSync(p)) return [];
   return fs.readFileSync(p, 'utf-8')
-    .split('\n')
-    .map(l => l.trim())
-    .filter(l => l && !l.startsWith('#'));
+  .split('\n')
+  .map(l => l.trim())
+  .filter(l => l && !l.startsWith('#'));
 }
 
 function domainAllowed(domain, allowlist) {
@@ -220,7 +257,7 @@ function domainAllowed(domain, allowlist) {
 }
 
 function cmdUrlPolicy(dir) {
-  const targetDir = dir ? path.resolve(dir) : ARCHIVE_DIR;
+  const targetDir = dir ? resolveUserPath(dir) : ARCHIVE_DIR;
   if (!fs.existsSync(targetDir)) {
     console.error(c.red(`✗ 目录不存在: ${targetDir}`)); process.exit(1);
   }
@@ -289,7 +326,7 @@ function probeUrl(url) {
         { hostname: parsed.hostname, path: parsed.pathname + parsed.search,
           method: 'HEAD',
           headers: { 'User-Agent': 'baoyan-archive-cli/1.0' } },
-        res => finish({ url, status: res.statusCode, ok: res.statusCode < 400 })
+          res => finish({ url, status: res.statusCode, ok: res.statusCode < 400 })
       );
       req.setTimeout(8000, () => { req.destroy(); finish({ url, status: 'TIMEOUT', ok: false }); });
       req.on('error', e => finish({ url, status: `ERR: ${e.code || e.message}`, ok: false }));
@@ -301,7 +338,7 @@ function probeUrl(url) {
 }
 
 async function cmdCheck(dir) {
-  const targetDir = dir ? path.resolve(dir) : ARCHIVE_DIR;
+  const targetDir = dir ? resolveUserPath(dir) : ARCHIVE_DIR;
   if (!fs.existsSync(targetDir)) {
     console.error(c.red(`✗ 目录不存在: ${targetDir}`)); process.exit(1);
   }
@@ -366,37 +403,44 @@ async function cmdCi(dir) {
 
 // ─── sync-readme ──────────────────────────────────────────────────────────────
 
-const README_START = '<!-- SCHOOL-LIST:START -->';
-const README_END   = '<!-- SCHOOL-LIST:END -->';
+const README_START = '';
+const README_END   = '';
 
 function cmdSyncReadme() {
+  // 1. 定义锚点常量（修正：填入实际的注释标签）
+  const README_START = '<!-- SCHOOL-LIST:START -->';
+  const README_END   = '<!-- SCHOOL-LIST:END -->';
+
   const readmePath = path.join(ROOT, 'README.md');
+  if (!fs.existsSync(readmePath)) {
+    console.error(c.red(`✗ 未找到 README.md: ${readmePath}`));
+    process.exit(1);
+  }
   const readme = fs.readFileSync(readmePath, 'utf-8');
 
-  if (!readme.includes(README_START) || !readme.includes(README_END)) {
-    console.error(c.red(`✗ README.md 中未找到锚点注释 ${README_START} / ${README_END}`));
+  // 2. 收集档案目录中的院校信息
+  const schools = new Map();
+  if (!fs.existsSync(ARCHIVE_DIR)) {
+    console.error(c.red(`✗ 档案目录不存在: ${ARCHIVE_DIR}`));
     process.exit(1);
   }
 
-  // Collect schools → colleges from archive directory
-  const schools = new Map();
-  if (!fs.existsSync(ARCHIVE_DIR)) {
-    console.error(c.red(`✗ 档案目录不存在: ${ARCHIVE_DIR}`)); process.exit(1);
-  }
   for (const entry of fs.readdirSync(ARCHIVE_DIR, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const schoolDir = path.join(ARCHIVE_DIR, entry.name);
     const colleges = [];
+
     for (const file of fs.readdirSync(schoolDir, { withFileTypes: true })) {
-      if (!/\.mdx?$/.test(file.name)) continue;
-      // Skip supplement files (_补充_*.md)
-      if (SUPPLEMENT_RE.test(file.name)) continue;
+      // 排除非 md 文件及补充稿
+      if (!/\.mdx?$/.test(file.name) || SUPPLEMENT_RE.test(file.name)) continue;
+
       const content = fs.readFileSync(path.join(schoolDir, file.name), 'utf-8');
       const title = parseFrontmatterTitle(content);
-      // Use the part after " - " in "学校 - 学院" title, fallback to filename stem
+
+      // 提取学院名称：如果有 "学校 - 学院" 格式则取后者，否则取标题或文件名
       const collegeName = title
-        ? (title.includes(' - ') ? title.split(' - ').slice(1).join(' - ') : title)
-        : file.name.replace(/\.mdx?$/, '');
+      ? (title.includes(' - ') ? title.split(' - ').slice(1).join(' - ') : title)
+      : file.name.replace(/\.mdx?$/, '');
       colleges.push(collegeName);
     }
     if (colleges.length > 0) schools.set(entry.name, colleges);
@@ -407,25 +451,53 @@ function cmdSyncReadme() {
     return;
   }
 
-  // Build list lines
-  let list = '';
-  for (const [school, colleges] of schools) {
-    list += `- **${school}**：${colleges.join('、')}\n`;
+  // 3. 组装新列表内容
+  const listLines = [];
+  // 将 Map 转换为数组并排序，保证 README 列表顺序稳定
+  const sortedSchools = Array.from(schools.keys()).sort();
+  for (const school of sortedSchools) {
+    const colleges = schools.get(school);
+    listLines.push(`- **${school}**：${colleges.join('、')}`);
   }
-  list += '- *(更多院校档案欢迎社区贡献……)*';
+  listLines.push('- *(更多院校档案欢迎社区贡献……)*');
 
-  // Replace between anchors
-  const newReadme = readme.replace(
-    new RegExp(`${README_START}[\\s\\S]*?${README_END}`),
-    `${README_START}\n${list}\n${README_END}`
-  );
+  // 4. 执行精准替换逻辑
+  const lines = readme.split(/\r?\n/);
+
+  // 定位大标题，缩小搜索范围
+  const headerIdx = lines.findIndex(l => l.includes('##') && l.includes('已收录院校'));
+  const searchStartIdx = headerIdx !== -1 ? headerIdx : 0;
+
+  // 定位 START 锚点
+  const targetStartIdx = lines.findIndex((l, i) => i >= searchStartIdx && l.includes(README_START));
+  if (targetStartIdx === -1) {
+    console.error(c.red(`✗ 未能在 README.md 中找到起始锚点: ${README_START}`));
+    process.exit(1);
+  }
+
+  // 定位 END 锚点
+  const targetEndIdx = lines.findIndex((l, i) => i > targetStartIdx && l.includes(README_END));
+  if (targetEndIdx === -1) {
+    console.error(c.red(`✗ 未能在 START 锚点下方找到结束锚点: ${README_END}`));
+    process.exit(1);
+  }
+
+  // 5. 重新拼接文件内容
+  // 保留 START 之前的内容（含 START 行）
+  const headLines = lines.slice(0, targetStartIdx + 1);
+  // 保留 END 之后的内容（含 END 行）
+  const tailLines = lines.slice(targetEndIdx);
+
+  // 组合：头部 + 新列表 + 尾部
+  const newReadme = [...headLines, ...listLines, ...tailLines].join('\n');
 
   if (newReadme === readme) {
-    console.log(c.green('✓ README 院校列表无变化，无需更新。'));
+    console.log(c.green('✓ README 院校列表已经是最新，无需更新。'));
     return;
   }
+
   fs.writeFileSync(readmePath, newReadme, 'utf-8');
-  console.log(c.green(`✓ README.md 院校列表已同步（${schools.size} 所学校）。`));
+  console.log(c.green(`✓ README.md 院校列表已同步（共 ${schools.size} 所学校）。`));
 }
 
 // ─── migrate-meta (batch frontmatter update) ─────────────────────────────────
@@ -505,7 +577,7 @@ function cmdMigrateMeta(args) {
 // ─── index (archive coverage table) ──────────────────────────────────────────
 
 function cmdIndex(dir, outFile) {
-  const targetDir = dir ? path.resolve(dir) : ARCHIVE_DIR;
+  const targetDir = dir ? resolveUserPath(dir) : ARCHIVE_DIR;
   if (!fs.existsSync(targetDir)) {
     console.error(c.red(`✗ 目录不存在: ${targetDir}`)); process.exit(1);
   }
@@ -541,7 +613,7 @@ function cmdIndex(dir, outFile) {
   }
 
   if (outFile) {
-    fs.writeFileSync(path.resolve(outFile), md, 'utf-8');
+    fs.writeFileSync(resolveUserPath(outFile), md, 'utf-8');
     console.log(c.green(`✓ 索引已写入: ${outFile}`));
   } else {
     process.stdout.write(md);
@@ -557,10 +629,10 @@ function buildEditScript(a, b) {
   for (let i = 1; i <= m; i++)
     for (let j = 1; j <= n; j++)
       dp[i][j] = a[i-1] === b[j-1]
-        ? dp[i-1][j-1] + 1
-        : Math.max(dp[i-1][j], dp[i][j-1]);
+      ? dp[i-1][j-1] + 1
+      : Math.max(dp[i-1][j], dp[i][j-1]);
 
-  const ops = [];
+    const ops = [];
   let i = m, j = n;
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && a[i-1] === b[j-1]) {
@@ -579,9 +651,9 @@ function cmdDiff(file1, file2) {
     console.error('用法: npm run cli -- diff <文件1> <文件2>');
     process.exit(1);
   }
-  const p1 = path.resolve(file1), p2 = path.resolve(file2);
-  if (!fs.existsSync(p1)) { console.error(c.red(`✗ 文件不存在: ${file1}`)); process.exit(1); }
-  if (!fs.existsSync(p2)) { console.error(c.red(`✗ 文件不存在: ${file2}`)); process.exit(1); }
+  const p1 = resolveUserPath(file1), p2 = resolveUserPath(file2);
+  if (!fs.existsSync(p1)) { console.error(c.red(`✗ 文件不存在: ${p1}`)); process.exit(1); }
+  if (!fs.existsSync(p2)) { console.error(c.red(`✗ 文件不存在: ${p2}`)); process.exit(1); }
 
   const lines1 = fs.readFileSync(p1, 'utf-8').split('\n');
   const lines2 = fs.readFileSync(p2, 'utf-8').split('\n');
@@ -632,28 +704,28 @@ const HELP = `${c.bold('保研档案库维护 CLI')}
 用法: npm run cli -- <指令> [参数]
 
 ${c.bold('── 稿件管理 ──')}
-  ${c.bold('replace')} --all                    将全部补充稿（*_补充_*.md）覆盖至原文件
-  ${c.bold('replace')} -f <文件>                覆盖指定补充稿对应的原文件
-  ${c.bold('diff')}    <文件1> <文件2>           对比两个文件的差异
+${c.bold('replace')} --all                    将全部补充稿（*_补充_*.md）覆盖至原文件
+${c.bold('replace')} -f <文件>                覆盖指定补充稿对应的原文件
+${c.bold('diff')}    <文件1> <文件2>           对比两个文件的差异
 
 ${c.bold('── 质量检查 ──')}
-  ${c.bold('lint')}        [目录]               Markdown 格式检查（markdownlint-cli2）
-  ${c.bold('url-policy')}  [目录]               链接白名单策略检查
-  ${c.bold('check')}       [目录]               死链探测（HTTP HEAD 请求）
-  ${c.bold('ci')}          [目录]               运行全量 CI 检查（lint + url-policy + check）
+${c.bold('lint')}        [目录]               Markdown 格式检查（markdownlint-cli2）
+${c.bold('url-policy')}  [目录]               链接白名单策略检查
+${c.bold('check')}       [目录]               死链探测（HTTP HEAD 请求）
+${c.bold('ci')}          [目录]               运行全量 CI 检查（lint + url-policy + check）
 
 ${c.bold('── 数据维护 ──')}
-  ${c.bold('sync-readme')}                      扫描档案目录，自动更新 README 院校列表
-  ${c.bold('index')}       [目录] [--out 文件]  生成档案目录索引表（默认输出到 stdout）
-  ${c.bold('migrate-meta')} --add "key: value"  为所有档案 frontmatter 批量添加新字段
-  ${c.bold('migrate-meta')} --rename "old: new" 批量重命名 frontmatter 字段
+${c.bold('sync-readme')}                      扫描档案目录，自动更新 README 院校列表
+${c.bold('index')}       [目录] [--out 文件]  生成档案目录索引表（默认输出到 stdout）
+${c.bold('migrate-meta')} --add "key: value"  为所有档案 frontmatter 批量添加新字段
+${c.bold('migrate-meta')} --rename "old: new" 批量重命名 frontmatter 字段
 
 ${c.bold('── Git 操作 ──')}
-  ${c.bold('auto-commit')} [--msg "消息"]          检测工作区变更并交互式提交
+${c.bold('auto-commit')} [--msg "消息"]          检测工作区变更并交互式提交
 
 ${c.bold('── 级联选项 ──')}
-  replace / sync-readme / migrate-meta 支持追加 ${c.bold('--commit')} 选项，执行完毕后自动提交变更。
-  示例: npm run cli -- replace --all --commit
+replace / sync-readme / migrate-meta 支持追加 ${c.bold('--commit')} 选项，执行完毕后自动提交变更。
+示例: npm run cli -- replace --all --commit
 `;
 
 const [,, cmd, ...args] = process.argv;

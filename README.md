@@ -174,6 +174,7 @@ npm run dev
 | `url-policy [目录]` | 检查档案内所有链接是否符合 `config/link-allowlist.txt` 白名单规则 |
 | `check [目录]` | 发送 HTTP HEAD 请求探测所有链接的可达性（死链检查） |
 | `ci [目录]` | 一键运行全量 CI 检查：`lint` + `url-policy` + `check` |
+| `ci .` | 一键运行当前目录下的全量 CI 检查 |
 
 #### 数据维护
 
