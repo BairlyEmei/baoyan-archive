@@ -94,24 +94,43 @@
 
 ```text
 baoyan-archive/
-├── .github/workflows/          # GitHub Actions 自动化 CI/CD 脚本
+├── .github/
+│   └── workflows/              # GitHub Actions 自动化 CI/CD 脚本
 ├── api/
+│   ├── check_exists.js         # 检查指定院校档案是否已存在
 │   └── submit_pr.js            # 核心网关：接收 Markdown 文本，创建分支并提交 PR
+├── config/
+│   └── link-allowlist.txt      # URL 白名单规则（用于 url-policy 检查）
+├── public/
+│   ├── copy-links.js           # 为归档页面注入「复制链接」按钮
+│   ├── export-json.js          # 为归档页面注入「导出 JSON」按钮（解析页面内容并复制）
+│   └── scroll-restore.js       # 页面滚动位置恢复脚本
+├── scripts/
+│   └── cli.js                  # 维护者 CLI 工具（replace/diff/lint/check/sync-readme 等）
 ├── src/
 │   ├── components/             # 独立前端交互组件库
 │   │   ├── SubmitForm.jsx      # 投稿主容器（集成 Prompt、JSON 录入与表单渲染）
 │   │   ├── JsonParser.js       # 数据清洗模块：处理冗余标记并执行 Ajv 校验
-│   │   └── MarkdownSerializer.js # 序列化工具：将表单 State 转化为标准 Markdown
-│   └── content/docs/
-│       ├── index.mdx           # 站点首页
-│       ├── contribute.mdx      # 贡献者交互入口
-│       ├── template.md         # 标准数据档案 Markdown 模板
-│       └── 统计专业档案/         # 📂 核心数据存储区 (SSOT)
-│           └── 中国人民大学统计学院.md
+│   │   ├── MarkdownSerializer.js # 序列化工具：将表单 State 转化为标准 Markdown
+│   │   ├── CustomHead.astro    # 自定义 <head>（注入公共脚本）
+│   │   ├── CustomFooter.astro  # 自定义页脚
+│   │   └── editor-fixes.css   # 编辑器样式修复
+│   ├── content/docs/
+│   │   ├── index.mdx           # 站点首页
+│   │   ├── contribute.mdx      # 贡献者交互入口
+│   │   ├── template.md         # 标准数据档案 Markdown 模板
+│   │   └── 统计专业档案/         # 📂 核心数据存储区 (SSOT)
+│   │       ├── index.md        # 档案目录总览
+│   │       ├── 中国人民大学/
+│   │       │   ├── 统计学院.md
+│   │       │   └── 统计与大数据研究院.md
+│   │       ├── 上海交通大学/
+│   │       │   └── 数学科学学院.md
+│   │       └── ...（其余院校目录，结构相同）
+│   └── styles/                 # 全局样式文件
 ├── astro.config.mjs            # Astro 全局配置
 ├── vercel.json                 # Vercel 部署配置
 └── package.json
-
 ```
 
 ---
