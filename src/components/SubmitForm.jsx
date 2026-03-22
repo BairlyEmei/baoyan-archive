@@ -17,7 +17,7 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import MarkdownIt from 'markdown-it';
 import './editor-fixes.css';
 import { parseAndValidateJson } from './JsonParser';
-import { serializeToMarkdown, toLineSeparatedText } from './MarkdownSerializer';
+import { serializeToMarkdown, serializeToJson, deserializeFromMarkdown, toLineSeparatedText } from './MarkdownSerializer';
 
 const DRAFT_KEY = 'baoyan-submit-draft';
 
@@ -197,9 +197,16 @@ export default function SubmitForm() {
                 onOk() {
                     // 解析已有档案内容并填入表单
                     try {
+                        // Try JSON first (future-proofing), then fall back to Markdown parsing
                         const result = parseAndValidateJson(data.content);
+                        let formData = null;
                         if (result.ok) {
-                            const normalized = normalizeIncomingData(result.data);
+                            formData = result.data;
+                        } else {
+                            formData = deserializeFromMarkdown(data.content);
+                        }
+                        if (formData) {
+                            const normalized = normalizeIncomingData(formData);
                             form.setFieldsValue(normalized);
                             setFormValues(normalized);
                         }
@@ -252,6 +259,13 @@ export default function SubmitForm() {
         setFormValues(normalized);
         setParseErrors([]);
         setParseSuccess('JSON 校验通过，表单已自动填充。请继续核对后再提交。');
+    }
+
+    function handleExportJson() {
+        const json = serializeToJson(formValues, authorName);
+        setRawJson(json);
+        setParseErrors([]);
+        setParseSuccess('已将当前表单内容导出为 JSON，可复制保存或直接重新导入。');
     }
 
     function handleDownload() {
@@ -373,6 +387,9 @@ export default function SubmitForm() {
                         />
                         <Button className="btn-add btn-parse" onClick={handleJsonParse}>
                             解析并填充表单
+                        </Button>
+                        <Button onClick={handleExportJson}>
+                            导出表单为 JSON
                         </Button>
                         {parseSuccess ? <Alert type="success" showIcon message={parseSuccess} /> : null}
                         {parseErrors.length > 0 ? (

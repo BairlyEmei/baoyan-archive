@@ -184,6 +184,145 @@ ${section3}
 * **就读体验/导师风评/吐槽贴：** ${linksToInline(misc.notesLinks)}${attribution}`;
 }
 
+/**
+ * Deserialize a Markdown archive file (as produced by serializeToMarkdown) back
+ * into a structured data object compatible with normalizeIncomingData / the form.
+ *
+ * Link fields are returned as arrays of strings; each element is either a bare
+ * URL ("https://...") or a full Markdown link ("[label](url)") so that labels
+ * are preserved on round-trip.
+ *
+ * Returns null if the input is empty or cannot be parsed.
+ */
+export function deserializeFromMarkdown(markdown) {
+    if (!markdown) return null;
+
+    // Strip YAML front matter  (---…---)
+    const body = markdown.replace(/^---[\s\S]*?---\s*/, '');
+
+    // --- helpers ---
+
+    // Extract the value on the same line after "**Label：** " (full- or half-width colon).
+    // Returns '' when not found or when the value is the placeholder （留空）.
+    function fieldVal(text, label) {
+        const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const m = new RegExp(`\\*\\*${escaped}[：:]\\*\\*[ \\t]*(.+)`, 'm').exec(text);
+        if (!m) return '';
+        const v = m[1].trim();
+        return v === '（留空）' ? '' : v;
+    }
+
+    // Split "| "-separated inline Markdown links back to an array of items.
+    // Each element keeps its full "[label](url)" representation so labels survive.
+    // Plain URLs (no label) are kept as-is.
+    function splitPipeLinks(raw) {
+        if (!raw) return [];
+        return raw.split(' | ').map((s) => s.trim()).filter((s) => /https?:\/\//.test(s));
+    }
+
+    // --- section slices ---
+    const i1 = body.indexOf('## 1.');
+    const i2 = body.indexOf('## 2.');
+    const i3 = body.indexOf('## 3.');
+    const i4 = body.indexOf('## 4.');
+
+    const s1 = i1 >= 0 && i2 >= 0 ? body.slice(i1, i2) : '';
+    const s2 = i2 >= 0 && i3 >= 0 ? body.slice(i2, i3) : '';
+    const s3 = i3 >= 0 && i4 >= 0 ? body.slice(i3, i4) : '';
+    const s4 = i4 >= 0 ? body.slice(i4) : '';
+
+    // --- basicInfo ---
+    const basicInfo = {
+        college: fieldVal(s1, '招生学院'),
+        track: fieldVal(s1, '招生方向'),
+        degree: fieldVal(s1, '学制与学位'),
+        school: fieldVal(s1, '学校名称'),
+        length: fieldVal(s1, '学制长度'),
+    };
+
+    // --- timeline ---
+
+    // Website: stored as [链接](URL) or bare URL
+    let website = '';
+    const wsRaw = fieldVal(s2, '研究生院/学院官网地址');
+    if (wsRaw) {
+        const wsMd = /\[([^\]]*)\]\((https?:\/\/[^\s)]*)\)/.exec(wsRaw);
+        website = wsMd ? wsMd[2] : wsRaw;
+    }
+
+    // Summer block ends before **预推免
+    const summerEnd = s2.search(/\*\s*\*\*预推免/);
+    const summerBlock = summerEnd >= 0 ? s2.slice(0, summerEnd) : s2;
+    const summer = {
+        publish: fieldVal(summerBlock, '往年发布时间'),
+        deadline: fieldVal(summerBlock, '往年截止时间'),
+        notices: splitPipeLinks(fieldVal(summerBlock, '官方通知链接')),
+    };
+
+    // prePush block ends before **其他关键文件
+    const prePushStart = s2.indexOf('**预推免');
+    const prePushEnd = s2.search(/\*\s*\*\*其他关键文件/);
+    const prePushBlock =
+        prePushStart >= 0
+            ? prePushEnd >= 0
+                ? s2.slice(prePushStart, prePushEnd)
+                : s2.slice(prePushStart)
+            : '';
+    const prePush = {
+        publish: fieldVal(prePushBlock, '往年发布时间'),
+        notices: splitPipeLinks(fieldVal(prePushBlock, '官方通知链接')),
+    };
+
+    // otherDocs: "[t1](u1)、[t2](u2)"  (joined by 、)
+    let otherDocs = [];
+    const otherRaw = fieldVal(s2, '其他关键文件');
+    if (otherRaw) {
+        otherDocs = otherRaw
+            .split('、')
+            .map((item) => {
+                const m = /\[([^\]]*)\]\((https?:\/\/[^\s)]*)\)/.exec(item.trim());
+                return m ? { title: m[1], url: m[2] } : null;
+            })
+            .filter(Boolean);
+    }
+
+    // --- assessments ---
+    const assessments = [];
+    const dirRe = /### 方向\d+：【([^】]*)】([\s\S]*?)(?=### 方向\d+：【|$)/g;
+    let dirMatch;
+    while ((dirMatch = dirRe.exec(s3)) !== null) {
+        const name = dirMatch[1].trim();
+        const b = dirMatch[2];
+        assessments.push({
+            name,
+            enrollment: fieldVal(b, '预计招生规模'),
+            format: fieldVal(b, '考核形式'),
+            writtenScope: fieldVal(b, '笔试/专业课范围'),
+            bar: fieldVal(b, '背景门槛 (Bar)'),
+            interviewPreference: fieldVal(b, '面试偏好'),
+            experienceLinks: splitPipeLinks(fieldVal(b, '综合经验贴（夏令营/预推免）')),
+            admissionListLinks: splitPipeLinks(fieldVal(b, '优营/预推免名单贴')),
+            interviewLinks: splitPipeLinks(fieldVal(b, '面试经验贴')),
+            examLinks: splitPipeLinks(fieldVal(b, '真题分享贴')),
+        });
+    }
+
+    // --- misc ---
+    const notesLinks = splitPipeLinks(fieldVal(s4, '就读体验/导师风评/吐槽贴'));
+
+    return {
+        basicInfo,
+        timeline: {
+            website,
+            summer,
+            prePush,
+            ...(otherDocs.length ? { otherDocs } : {}),
+        },
+        assessments: assessments.length ? assessments : undefined,
+        misc: { notesLinks },
+    };
+}
+
 export function toLineSeparatedText(value) {
     if (Array.isArray(value)) {
         return value.join('\n');
