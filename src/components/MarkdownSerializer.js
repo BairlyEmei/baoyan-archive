@@ -37,6 +37,15 @@ function decodeHtmlEntities(str) {
  *   - label – text before the URL, or null when the default "链接X" label should be used
  */
 function extractLinkParts(item) {
+    // Handle markdown link format: [label](url) – detect this first to avoid
+    // mangling the bracket/paren characters as part of the label.
+    const mdLinkMatch = /^\[([^\]]+)\]\((https?:\/\/[^\s)]*)\)/.exec(item);
+    if (mdLinkMatch) {
+        const label = mdLinkMatch[1].trim() || null;
+        const url = decodeHtmlEntities(mdLinkMatch[2]);
+        return { url, label };
+    }
+
     // Stop at whitespace or CJK/fullwidth characters so trailing Chinese text
     // (e.g. "点击查看") is not absorbed into the URL.
     const urlPattern = /https?:\/\/[^\s\u3000-\u9fff\uff00-\uffef]+/;
@@ -194,10 +203,14 @@ export function serializeToJson(formData, authorName) {
     const summer = timeline.summer || {};
     const prePush = timeline.prePush || {};
 
-    const toUrlArray = (raw) =>
+    const toLinkArray = (raw) =>
         normalizeLinks(raw)
-            .map((item) => extractLinkParts(item).url)
-            .filter((u) => /^https?:\/\//.test(u));
+            .map((item) => {
+                const { url, label } = extractLinkParts(item);
+                if (!/^https?:\/\//.test(url)) return null;
+                return label ? `[${label}](${url})` : url;
+            })
+            .filter(Boolean);
 
     const otherDocs = (timeline.otherDocs || [])
         .filter((doc) => doc && (doc.title || doc.url))
@@ -210,10 +223,10 @@ export function serializeToJson(formData, authorName) {
         writtenScope: item.writtenScope || '',
         bar: item.bar || '',
         interviewPreference: item.interviewPreference || '',
-        experienceLinks: toUrlArray(item.experienceLinks),
-        admissionListLinks: toUrlArray(item.admissionListLinks),
-        interviewLinks: toUrlArray(item.interviewLinks),
-        examLinks: toUrlArray(item.examLinks),
+        experienceLinks: toLinkArray(item.experienceLinks),
+        admissionListLinks: toLinkArray(item.admissionListLinks),
+        interviewLinks: toLinkArray(item.interviewLinks),
+        examLinks: toLinkArray(item.examLinks),
     }));
 
     const obj = {
@@ -229,17 +242,17 @@ export function serializeToJson(formData, authorName) {
             summer: {
                 publish: summer.publish || '',
                 deadline: summer.deadline || '',
-                notices: toUrlArray(summer.notices),
+                notices: toLinkArray(summer.notices),
             },
             prePush: {
                 publish: prePush.publish || '',
-                notices: toUrlArray(prePush.notices),
+                notices: toLinkArray(prePush.notices),
             },
             ...(otherDocs.length ? { otherDocs } : {}),
         },
         assessments,
         misc: {
-            notesLinks: toUrlArray(formData?.misc?.notesLinks),
+            notesLinks: toLinkArray(formData?.misc?.notesLinks),
         },
         attribution: authorName?.trim() || '匿名',
     };
