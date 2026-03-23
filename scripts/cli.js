@@ -315,22 +315,57 @@ function extractLinks(content) {
   return links;
 }
 
-function probeUrl(url) {
+function probeUrl(url, method = 'HEAD') {
   return new Promise(resolve => {
     let done = false;
     const finish = result => { if (!done) { done = true; resolve(result); } };
+
     try {
       const parsed = new URL(url);
       const lib = parsed.protocol === 'https:' ? https : http;
-      const req = lib.request(
-        { hostname: parsed.hostname, path: parsed.pathname + parsed.search,
-          method: 'HEAD',
-          headers: { 'User-Agent': 'baoyan-archive-cli/1.0' } },
-          res => finish({ url, status: res.statusCode, ok: res.statusCode < 400 })
-      );
-      req.setTimeout(8000, () => { req.destroy(); finish({ url, status: 'TIMEOUT', ok: false }); });
+
+      // 伪装成常见的 Chrome 浏览器
+      const options = {
+        hostname: parsed.hostname,
+        path: parsed.pathname + parsed.search,
+        method: method,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+                     'Connection': 'keep-alive'
+        }
+      };
+
+      const req = lib.request(options, res => {
+        const { statusCode } = res;
+
+        // 如果是重定向 (301, 302, 303, 307, 308)
+        if (statusCode >= 300 && statusCode < 400 && res.headers.location) {
+          // 很多短链接服务需要 GET 才能正确跳转，所以这里不继续追溯了，直接认为成功
+          return finish({ url, status: `Redirect (${statusCode})`, ok: true });
+        }
+
+        // 如果 HEAD 请求被拒绝 (404, 403, 405 等)，尝试降级为 GET 请求
+        if (method === 'HEAD' && statusCode >= 400) {
+          // 很多防爬虫的网站会拒绝 HEAD 请求，我们换成标准的 GET 再试一次
+          return probeUrl(url, 'GET').then(finish);
+        }
+
+        finish({ url, status: statusCode, ok: statusCode < 400 });
+
+        // 消耗掉响应数据以释放内存
+        res.on('data', () => {});
+      });
+
+      req.setTimeout(8000, () => {
+        req.destroy();
+        finish({ url, status: 'TIMEOUT', ok: false });
+      });
+
       req.on('error', e => finish({ url, status: `ERR: ${e.code || e.message}`, ok: false }));
       req.end();
+
     } catch {
       finish({ url, status: 'INVALID URL', ok: false });
     }
