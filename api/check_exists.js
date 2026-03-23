@@ -13,9 +13,7 @@ const ALLOWED_ORIGINS = [
 
 function isOriginAllowed(origin) {
   if (!origin) return false;
-  if (ALLOWED_ORIGINS.includes(origin)) return true;
-  if (/\.vercel\.app$/.test(origin)) return true;
-  return false;
+  return ALLOWED_ORIGINS.includes(origin);
 }
 
 const REPO_OWNER = 'BairlyEmei';

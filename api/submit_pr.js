@@ -1,6 +1,89 @@
 // api/submit_pr.js
 import { Octokit } from "@octokit/rest";
 import { nanoid } from "nanoid";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import path from "path";
+
+// ============================================================
+// 服务端 URL/Markdown 内容安全校验
+// 与 scripts/cli.js 和 scripts/check_new_urls.py 的规则对齐
+// ============================================================
+const __filename_submit = fileURLToPath(import.meta.url);
+const __dirname_submit = path.dirname(__filename_submit);
+
+/** 危险 URL 协议黑名单 */
+const BLOCKED_SCHEMES = new Set(['javascript', 'data', 'vbscript', 'file']);
+
+/** URL 短链服务黑名单 */
+const BLOCKED_SHORTENERS = new Set(['t.co', 'bit.ly', 'suo.im', 'is.gd', 'tinyurl.com']);
+
+/** 加载 config/link-allowlist.txt；失败时返回 null（跳过白名单校验） */
+function loadAllowlist() {
+  try {
+    const p = path.join(__dirname_submit, '..', 'config', 'link-allowlist.txt');
+    return readFileSync(p, 'utf-8')
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l && !l.startsWith('#'));
+  } catch {
+    return null;
+  }
+}
+
+/** 检查域名是否在白名单（精确匹配或 *.前缀通配） */
+function domainAllowed(domain, allowlist) {
+  for (const pattern of allowlist) {
+    if (domain === pattern) return true;
+    if (pattern.startsWith('*.') && domain.endsWith(pattern.slice(1))) return true;
+  }
+  return false;
+}
+
+/**
+ * 校验 Markdown 正文中所有 URL 的安全性。
+ * @param {string} content
+ * @returns {{ url: string, reason: string }[]} 违规列表，空数组表示通过
+ */
+function validateMarkdownContent(content) {
+  const allowlist = loadAllowlist();
+  const violations = [];
+  const seen = new Set();
+
+  // 1. 检查 Markdown 链接目标中的危险协议（如 javascript:, data: 等）
+  const MARKDOWN_HREF_RE = /\]\(([^)\s]+)[^)]*\)/g;
+  let m;
+  while ((m = MARKDOWN_HREF_RE.exec(content)) !== null) {
+    const href = m[1];
+    const schemeMatch = /^([a-zA-Z][a-zA-Z0-9+\-.]*):/.exec(href);
+    if (schemeMatch && BLOCKED_SCHEMES.has(schemeMatch[1].toLowerCase())) {
+      violations.push({ url: href, reason: `禁止使用 ${schemeMatch[1].toLowerCase()}: 协议` });
+    }
+  }
+
+  // 2. 检查所有 http/https URL 是否符合域名白名单与短链黑名单
+  const HTTP_URL_RE = /https?:\/\/[^\s<>"')]+/g;
+  while ((m = HTTP_URL_RE.exec(content)) !== null) {
+    // 去除 URL 尾部可能粘连的标点符号（如 Markdown 中的 . , ; ）
+    const rawUrl = m[0].replace(/[.,;:]+$/, '');
+    if (seen.has(rawUrl)) continue;
+    seen.add(rawUrl);
+
+    let parsed;
+    try { parsed = new URL(rawUrl); } catch { continue; }
+
+    const domain = parsed.hostname.toLowerCase();
+    if (!domain) continue;
+
+    if (BLOCKED_SHORTENERS.has(domain)) {
+      violations.push({ url: rawUrl, reason: '禁止使用短网址服务' });
+    } else if (allowlist && allowlist.length > 0 && !domainAllowed(domain, allowlist)) {
+      violations.push({ url: rawUrl, reason: `域名 ${domain} 不在许可白名单内` });
+    }
+  }
+
+  return violations;
+}
 
 // ============================================================
 // 动态跨域白名单：在这里维护所有合法的请求来源域名
@@ -12,12 +95,9 @@ const ALLOWED_ORIGINS = [
   'https://stat-archive.bairly.me' // 正式生产主域名
 ];
 
-// 允许所有 Vercel 预览部署子域名（*.vercel.app）
 function isOriginAllowed(origin) {
   if (!origin) return false;
-  if (ALLOWED_ORIGINS.includes(origin)) return true;
-  if (/\.vercel\.app$/.test(origin)) return true;
-  return false;
+  return ALLOWED_ORIGINS.includes(origin);
 }
 
 // ============================================================
@@ -171,6 +251,20 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('[Turnstile] 无法连接到验证服务:', err.message);
     return res.status(500).json({ error: '无法连接到验证码校验服务' });
+  }
+
+  // ----------------------------------------------------------
+  // 3-b. URL/Markdown 内容安全校验：禁止危险协议与不在白名单的域名
+  //      与 CI 流水线（scripts/check_new_urls.py）使用相同规则，
+  //      服务端校验是最终防线，客户端无法绕过。
+  // ----------------------------------------------------------
+  const urlViolations = validateMarkdownContent(markdownContent);
+  if (urlViolations.length > 0) {
+    console.warn('[ContentPolicy] 提交内容包含违规 URL:', urlViolations);
+    return res.status(400).json({
+      error: '提交内容包含不允许的链接，请检查后重新提交',
+      violations: urlViolations.map(v => ({ url: v.url, reason: v.reason })),
+    });
   }
 
   // ----------------------------------------------------------
