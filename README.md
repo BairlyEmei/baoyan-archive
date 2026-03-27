@@ -4,7 +4,7 @@
 
 **开源 · 透明 · 可验证的保研信息协作平台**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel)](https://stat-archive.bairly.me)
 [![Built with Astro](https://img.shields.io/badge/Built%20with-Astro-ff5d01?logo=astro&logoColor=white)](https://astro.build)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/BairlyEmei/baoyan-archive/pulls)
@@ -202,4 +202,4 @@ npm run dev
 
 ## 📜 许可证
 
-本项目采用 [MIT License](https://www.google.com/search?q=./LICENSE) 开源。数据内容由社区贡献者共同维护，转载请注明来源。
+本项目代码采用 [GNU Affero General Public License v3.0 (AGPL-3.0)](./LICENSE) 开源。数据内容由社区贡献者共同维护，转载请注明来源。
