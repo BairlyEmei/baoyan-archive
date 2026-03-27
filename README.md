@@ -202,4 +202,4 @@ npm run dev
 
 ## 📜 许可证
 
-本项目代码采用 [GNU Affero General Public License v3.0 (AGPL-3.0)](./LICENSE) 开源。数据内容由社区贡献者共同维护，转载请注明来源。
+本项目代码采用 [AGPL-3.0](./LICENSE) 开源。数据内容由社区贡献者共同维护，转载请注明来源。
