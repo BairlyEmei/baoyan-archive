@@ -61,8 +61,19 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 获取本次 PR 新增或修改的档案文件
+        id: changed-files
+        run: |
+          BASE_SHA=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
+          FILES=$(git diff --name-only --diff-filter=AM "${BASE_SHA}" HEAD \
+            -- 'src/content/docs/统计专业档案/**.md' | tr '\n' ' ')
+          echo "files=${FILES}" >> $GITHUB_OUTPUT
 
       - name: 运行 Lychee Link Checker
+        if: steps.changed-files.outputs.files != ''
         uses: lycheeverse/lychee-action@v2
         with:
           # 忽略由于反爬虫 (如知乎) 和防火墙 (如人大) 导致的失败，放宽超时时间，接受200/403/429
@@ -74,7 +85,7 @@ jobs:
             --exclude "ruc\.edu\.cn"
             --timeout 15
             --accept 200,403,429
-            "src/content/docs/统计专业档案/**/*.md"
+            ${{ steps.changed-files.outputs.files }}
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 

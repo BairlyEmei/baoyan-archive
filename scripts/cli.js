@@ -419,8 +419,14 @@ async function cmdCheck(dir) {
 async function cmdCi(dir) {
   console.log(c.bold('════ 运行全量 CI 检查 ════\n'));
 
+  // Markdown 格式检查：与 GitHub Action 一致，continue-on-error，仅提示不阻断
   console.log(c.bold('【1/3】Markdown 格式检查'));
+  const exitBefore = process.exitCode;
   cmdLint(dir);
+  if (process.exitCode && !exitBefore) {
+    console.log(c.yellow('⚠ Markdown 格式检查存在警告，但不阻断 CI（与 GitHub Action 行为一致）。'));
+    process.exitCode = exitBefore;
+  }
 
   console.log(c.bold('\n【2/3】链接白名单策略检查'));
   cmdUrlPolicy(dir);
